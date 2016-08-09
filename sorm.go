@@ -3,6 +3,7 @@ package sorm
 import (
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 //
@@ -10,6 +11,7 @@ func NewDatabase(dbtype, conn string) (db Database) {
 	switch dbtype {
 	case "mysql":
 		d := &database{}
+		d.dbtype = dbtype
 		err := d.open(conn)
 		if err != nil {
 			fmt.Printf("sorm create database connection failed:%v\n", err)
@@ -22,19 +24,45 @@ func NewDatabase(dbtype, conn string) (db Database) {
 	}
 }
 
+type basedb struct {
+	dbtype string // just now only support "mysql"
+	dsn    string // connection string
+	db     *sql.DB
+}
+
+func (db *basedb) SetConnMaxLifetime(d time.Duration) {
+	if db.db != nil {
+		db.db.SetConnMaxLifetime(d)
+	}
+}
+
+func (db *basedb) SetMaxIdleConns(n int) {
+	if db.db != nil {
+		db.db.SetMaxIdleConns(n)
+	}
+}
+
+func (db *basedb) SetMaxOpenConns(n int) {
+	if db.db != nil {
+		db.db.SetMaxOpenConns(n)
+	}
+}
+
 type Database interface {
 	BindTable(tn string) Table
 	CreateQuery(sql string) (Query, error)
 
 	QueryRow(sql string, obj interface{}, args ...interface{}) error
-	Query(sql string, objs []interface{}, args ...interface{}) error
+	//Query(sql string, model interface{}, objs interface{}, args ...interface{}) error
+	Query(sql string, model interface{}, args ...interface{}) (objs []interface{}, err error)
 
 	// if args[0] is a struct, use it's field
 	Exec(sql string, args ...interface{}) (sql.Result, error)
 	Close() error
-	//SetConnMaxLifetime(d time.Duration)
-	//SetMaxIdleConns(n int)
-	//SetMaxOpenConns(n int)
+
+	SetConnMaxLifetime(d time.Duration)
+	SetMaxIdleConns(n int)
+	SetMaxOpenConns(n int)
 }
 
 type Table interface {
@@ -59,8 +87,9 @@ type Table interface {
 type Query interface {
 	Exec(args ...interface{}) (sql.Result, error)
 	Next(obj interface{}) error
-	QueryRow(obj interface{}) error
-	Query(objs []interface{}) error
+	QueryRow(objptr interface{}) error
+	//Query(objptrs interface{}) error
+	Query(model interface{}) (objs []interface{}, err error)
 
 	//Columns() ([]string, error)
 }

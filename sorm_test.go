@@ -5,6 +5,7 @@ import "testing"
 func TestFunction(t *testing.T) {
 	db := NewDatabase("mysql", "root:root@tcp(127.0.0.1:3306)/world")
 	if db == nil {
+		t.Fatal("create db failed")
 	}
 	defer db.Close()
 
@@ -47,12 +48,11 @@ func TestFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rs := make([]interface{}, 0)
-	err = tb.Query(rs)
+	all, err := tb.Query(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range rs {
+	for _, v := range all {
 		t.Log(v)
 	}
 
@@ -71,11 +71,11 @@ func TestFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = q.Query(rs)
+	all, err = q.Query(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range rs {
+	for _, v := range all {
 		t.Log(v)
 	}
 
