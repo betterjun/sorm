@@ -1,27 +1,52 @@
 package sorm
 
-import "testing"
+import (
+	"database/sql"
+	"fmt"
+	"testing"
+)
+
+func printResult(t *testing.T, res sql.Result) {
+	lii, _ := res.LastInsertId()
+	ra, _ := res.RowsAffected()
+	t.Log("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+}
 
 func TestFunction(t *testing.T) {
-	db := NewDatabase("mysql", "root:root@tcp(127.0.0.1:3306)/world")
+	db := NewDatabase("mysql", "root:betterjun@tcp(127.0.0.1:3306)/pholcus")
 	if db == nil {
 		t.Fatal("create db failed")
 	}
 	defer db.Close()
 
-	res, err := db.Exec("create table xx")
+	sql := "DROP TABLE IF EXISTS xx"
+	res, err := db.Exec(sql)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(res)
+	printResult(t, res)
 
-	sql := "select id from xx"
+	sql = "CREATE TABLE xx(id int, name varchar(255))"
+	res, err = db.Exec(sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+	printResult(t, res)
+
+	sql = "INSERT INTO xx(id, name) VALUES(1, \"test\")"
+	res, err = db.Exec(sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+	printResult(t, res)
+
+	sql = "select id from xx"
 	var id int64
 	err = db.QueryRow(sql, &id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(id)
+	//t.Log(id)
 
 	var name string
 	mm := make(map[string]interface{})
@@ -32,20 +57,21 @@ func TestFunction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(id)
-	t.Log(name)
+	//t.Log(id, name)
 
 	type tbs struct {
 		SId  int `orm:"id"`
 		Name string
 	}
 	r := &tbs{}
+
 	err = db.QueryRow(sql, r)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log(*r)
 
+	fmt.Printf("db.Query r=%p\n", r)
 	all, err := db.Query(sql, r)
 	if err != nil {
 		t.Fatal(err)

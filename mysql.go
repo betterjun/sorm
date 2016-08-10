@@ -3,6 +3,7 @@ package sorm
 import (
 	"database/sql"
 	"fmt"
+	"reflect"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -65,7 +66,7 @@ func (db *database) QueryRow(sql string, objptr interface{}, args ...interface{}
 			}
 
 			err = rows.Scan(scanArgs...)
-			fmt.Println("objptr=", objptr)
+			//fmt.Println("objptr=", objptr)
 			return err
 		} else {
 			return fmt.Errorf("no record found")
@@ -84,9 +85,14 @@ func (db *database) Query(sql string, model interface{}, args ...interface{}) (o
 		if err != nil {
 			return nil, err
 		}
+
 		scanArgs := getScanFields(model, cols)
 		if scanArgs == nil {
 			return nil, fmt.Errorf("no fields found in the objptr")
+		}
+
+		for _, v := range scanArgs {
+			fmt.Println("sorm :", v)
 		}
 
 		ret := make([]interface{}, 0)
@@ -95,7 +101,7 @@ func (db *database) Query(sql string, model interface{}, args ...interface{}) (o
 			if err != nil {
 				break
 			}
-			ret = append(ret, model)
+			ret = append(ret, reflect.Indirect(reflect.ValueOf(model)))
 		}
 		return ret, err
 	}
