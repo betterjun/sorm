@@ -24,8 +24,11 @@ func TestFunction(t *testing.T) {
 	t.Log(id)
 
 	var name string
+	mm := make(map[string]interface{})
+	mm["id"] = &id
+	mm["name"] = &name
 	sql = "select id, name from xx"
-	err = db.QueryRow(sql, &id, &name)
+	err = db.QueryRow(sql, &mm)
 	if err != nil {
 		t.Fatal(err)
 	}

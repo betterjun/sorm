@@ -51,7 +51,6 @@ func (db *database) CreateQuery(sql string) (q Query, err error) {
 
 func (db *database) QueryRow(sql string, objptr interface{}, args ...interface{}) (err error) {
 	if db.db != nil {
-		//row := db.db.QueryRow(sql, args...)
 		rows, err := db.db.Query(sql, args...)
 		defer rows.Close()
 		if rows.Next() {

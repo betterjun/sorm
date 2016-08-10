@@ -16,13 +16,19 @@ func getScanFields(ptr interface{}, cols []string) (scanArgs []interface{}) {
 	*/
 	v := reflect.ValueOf(ptr).Elem() // the struct variable
 	switch v.Kind() {
-	case reflect.Ptr:
-		scanArgs = append(scanArgs, v)
-		return scanArgs
-	case reflect.Map:
-		return getScanFieldFromMap(v, cols)
-	case reflect.Struct:
-		return getScanFieldFromStruct(v, cols)
+	case reflect.Ptr: // only accept pointer
+		ind := reflect.Indirect(v)
+		switch ind.Kind() {
+		case reflect.Map:
+			return getScanFieldFromMap(ind, cols)
+		case reflect.Struct:
+			return getScanFieldFromStruct(ind, cols)
+		default: // pointer to value
+			scanArgs = append(scanArgs, v)
+			return scanArgs
+		}
+	case reflect.Slice: // every element in slice should be pointer
+		return getScanFieldFromSlice(v, cols)
 	default:
 		return nil
 	}
@@ -52,6 +58,33 @@ func getScanFieldFromStruct(v reflect.Value, cols []string) (scanArgs []interfac
 		}
 		// take the addr and as interface{}, this is required by sql Scan
 		fields[name] = v.Field(i).Addr().Interface()
+	}
+
+	return getFields(fields, cols)
+}
+
+func getScanFieldFromSlice(v reflect.Value, cols []string) (scanArgs []interface{}) {
+	scanArgs = make([]interface{}, 0)
+	fields := make(map[string]interface{})
+	vals := v.Interface().([]interface{})
+
+	lc := len(cols)
+	c := 0
+	for _, vp := range vals {
+		obj := reflect.ValueOf(vp).Elem() // the struct variable
+		if obj.Kind() != reflect.Ptr {    // only accept pointer
+			return nil
+		}
+
+		scanArgs = append(scanArgs, vp)
+		c++
+		if c > lc {
+			break
+		}
+	}
+
+	for ; c < lc; c++ {
+		scanArgs = append(scanArgs, new(sql.RawBytes))
 	}
 
 	return getFields(fields, cols)
