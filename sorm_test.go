@@ -15,11 +15,41 @@ func TestFunction(t *testing.T) {
 	}
 	t.Log(res)
 
+	sql := "select id from xx"
+	var id int64
+	err = db.QueryRow(sql, &id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(id)
+
+	var name string
+	sql = "select id, name from xx"
+	err = db.QueryRow(sql, &id, &name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(id)
+	t.Log(name)
+
 	type tbs struct {
 		SId  int `orm:"id"`
 		Name string
 	}
 	r := &tbs{}
+	err = db.QueryRow(sql, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(*r)
+
+	all, err := db.Query(sql, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range all {
+		t.Log(v)
+	}
 
 	tb := db.BindTable("xx")
 	res, err = tb.Insert(r)
@@ -48,7 +78,7 @@ func TestFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	all, err := tb.Query(r)
+	all, err = tb.Query(r)
 	if err != nil {
 		t.Fatal(err)
 	}
