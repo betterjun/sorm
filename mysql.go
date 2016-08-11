@@ -41,18 +41,28 @@ func (db *database) Close() (err error) {
 }
 
 func (db *database) BindTable(tn string) (t Table) {
-	t = &table{}
+	t = &table{db: db.db, name: tn}
 	return t
 }
 
-func (db *database) CreateQuery(sql string) (q Query, err error) {
-	q = &query{}
+func (db *database) CreateQuery(sql string, model interface{}) (q Query, err error) {
+	if db.db != nil {
+		qr := &query{model: model}
+		qr.stmt, err = db.db.Prepare(sql)
+		if err != nil {
+			return nil, err
+		}
+		q = qr
+	}
 	return q, err
 }
 
 func (db *database) QueryRow(sql string, objptr interface{}, args ...interface{}) (err error) {
 	if db.db != nil {
 		rows, err := db.db.Query(sql, args...)
+		if err != nil {
+			return err
+		}
 		defer rows.Close()
 		if rows.Next() {
 			var cols []string
@@ -116,34 +126,67 @@ func (db *database) Exec(sql string, args ...interface{}) (res sql.Result, err e
 }
 
 type query struct {
-	dbtype string // just now only support "mysql"
-	dsn    string // connection string
-	db     *sql.DB
+	model interface{}
+	stmt  *sql.Stmt
+	rows  *sql.Rows
+	cols  []string
 }
 
-func (q *query) Exec(args ...interface{}) (res sql.Result, err error) {
-	return
+func (q *query) Exec(args ...interface{}) (err error) {
+	q.rows, err = q.stmt.Query(args...)
+	return err
 }
 
 func (q *query) Next(obj interface{}) (err error) {
-	return
+	if q.rows == nil {
+		return fmt.Errorf("not opened")
+	}
+	if q.cols == nil {
+		q.cols, err = q.rows.Columns()
+		if err != nil {
+			return err
+		}
+	}
+
+	scanArgs := getScanFields(obj, q.cols)
+	if q.rows.Next() {
+		err = q.rows.Scan(scanArgs...)
+	} else {
+		err = fmt.Errorf("eof found")
+		q.rows.Close()
+	}
+	return err
 }
 
-func (q *query) QueryRow(obj interface{}) (err error) {
-	return
-}
+func (q *query) All() (ret []interface{}, err error) {
+	if q.rows == nil {
+		return nil, err
+	}
+	if q.cols == nil {
+		q.cols, err = q.rows.Columns()
+		if err != nil {
+			return nil, err
+		}
+	}
 
-func (q *query) Query(model interface{}) (objs []interface{}, err error) {
-	return
+	scanArgs := getScanFields(q.model, q.cols)
+	defer q.rows.Close()
+	for q.rows.Next() {
+		err = q.rows.Scan(scanArgs...)
+		if err != nil {
+			break
+		}
+		ret = append(ret, reflect.Indirect(reflect.ValueOf(q.model)))
+	}
+	return ret, err
 }
 
 type table struct {
-	dbtype string // just now only support "mysql"
-	dsn    string // connection string
-	db     *sql.DB
+	name string
+	db   *sql.DB
 }
 
-func (t *table) Exec(args ...interface{}) (res sql.Result, err error) {
+func (t *table) Exec(args ...interface{}) (err error) {
 	return
 }
 
@@ -151,11 +194,7 @@ func (t *table) Next(obj interface{}) (err error) {
 	return
 }
 
-func (t *table) QueryRow(obj interface{}) (err error) {
-	return
-}
-
-func (t *table) Query(model interface{}) (objs []interface{}, err error) {
+func (t *table) All() (objs []interface{}, err error) {
 	return
 }
 

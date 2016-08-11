@@ -2,7 +2,6 @@ package sorm
 
 import (
 	"database/sql"
-	"fmt"
 	"testing"
 )
 
@@ -26,53 +25,62 @@ func TestFunction(t *testing.T) {
 	}
 	printResult(t, res)
 
-	sql = "CREATE TABLE xx(id int, name varchar(255))"
+	sql = "CREATE TABLE xx(id int, name varchar(255), dummy varchar(255))"
 	res, err = db.Exec(sql)
 	if err != nil {
 		t.Fatal(err)
 	}
 	printResult(t, res)
 
-	sql = "INSERT INTO xx(id, name) VALUES(1, \"test\")"
+	sql = "INSERT INTO xx(id, name, dummy) VALUES(1, \"test_name\", \"dummy_string\")"
 	res, err = db.Exec(sql)
 	if err != nil {
 		t.Fatal(err)
 	}
 	printResult(t, res)
 
+	// select a single value
 	sql = "select id from xx"
 	var id int64
 	err = db.QueryRow(sql, &id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	//t.Log(id)
+	t.Logf("query a single value ok, id=%v\n", id)
 
+	// select a map value
 	var name string
+	var dummy string
 	mm := make(map[string]interface{})
 	mm["id"] = &id
 	mm["name"] = &name
+	mm["dummy"] = &dummy
 	sql = "select id, name from xx"
 	err = db.QueryRow(sql, &mm)
 	if err != nil {
 		t.Fatal(err)
 	}
-	//t.Log(id, name)
+	t.Logf("query a map value ok, id=%v, name=%v, dummy=%v\n", id, name, dummy)
 
 	type tbs struct {
-		SId  int `orm:"id"`
-		Name string
+		SId   int `orm:"id"`
+		Name  string
+		Dummy string `orm:_`
 	}
 	r := &tbs{}
 
-	err = db.QueryRow(sql, r)
+	// select a struct value
+	sql = "select * from xx where id=?"
+	err = db.QueryRow(sql, r, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log(*r)
 
-	fmt.Printf("db.Query r=%p\n", r)
-	all, err := db.Query(sql, r)
+	// query only supports a struct pointer for model register
+	r = &tbs{}
+	sql = "select * from xx where id=?"
+	all, err := db.Query(sql, r, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,6 +88,37 @@ func TestFunction(t *testing.T) {
 		t.Log(v)
 	}
 
+	// test query
+	sql = "select * from xx where id=?"
+	q, err := db.CreateQuery(sql, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = q.Exec(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	all, err = q.All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range all {
+		t.Log(v)
+	}
+
+	err = q.Exec(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r = &tbs{}
+	//t.Log("bb", *r)
+	for q.Next(r) == nil {
+		t.Log(*r)
+	}
+
+	// test table
 	tb := db.BindTable("xx")
 	res, err = tb.Insert(r)
 	if err != nil {
@@ -96,50 +135,17 @@ func TestFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = tb.QueryRow(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(*r)
-
 	res, err = tb.Insert(r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	all, err = tb.Query(r)
+	all, err = tb.All()
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, v := range all {
 		t.Log(v)
-	}
-
-	q, err := db.CreateQuery("select * from xx")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	res, err = q.Exec()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = q.QueryRow(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	all, err = q.Query(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, v := range all {
-		t.Log(v)
-	}
-
-	for q.Next(r) != nil {
-		t.Log(*r)
 	}
 
 }

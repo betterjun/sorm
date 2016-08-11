@@ -50,7 +50,7 @@ func (db *basedb) SetMaxOpenConns(n int) {
 
 type Database interface {
 	BindTable(tn string) Table
-	CreateQuery(sql string) (Query, error)
+	CreateQuery(sql string, model interface{}) (Query, error)
 
 	QueryRow(sql string, obj interface{}, args ...interface{}) error
 	//Query(sql string, model interface{}, objs interface{}, args ...interface{}) error
@@ -85,11 +85,9 @@ type Table interface {
 }
 
 type Query interface {
-	Exec(args ...interface{}) (sql.Result, error)
+	Exec(args ...interface{}) error
 	Next(obj interface{}) error
-	QueryRow(objptr interface{}) error
-	//Query(objptrs interface{}) error
-	Query(model interface{}) (objs []interface{}, err error)
+	All() (objs []interface{}, err error)
 
 	//Columns() ([]string, error)
 }
