@@ -85,7 +85,9 @@ type Table interface {
 }
 
 type Query interface {
-	Exec(args ...interface{}) error
+	// need first call Exec
+	ExecuteQuery(args ...interface{}) error
+	// after calling Exec, you can ethier Next nor All. Both Next and All will release the conn after the end.
 	Next(obj interface{}) error
 	All() (objs []interface{}, err error)
 

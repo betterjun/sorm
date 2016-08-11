@@ -95,7 +95,7 @@ func TestFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = q.Exec(1)
+	err = q.ExecuteQuery(1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestFunction(t *testing.T) {
 		t.Log(v)
 	}
 
-	err = q.Exec(1)
+	err = q.ExecuteQuery(1)
 	if err != nil {
 		t.Fatal(err)
 	}

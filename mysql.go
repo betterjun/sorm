@@ -132,7 +132,7 @@ type query struct {
 	cols  []string
 }
 
-func (q *query) Exec(args ...interface{}) (err error) {
+func (q *query) ExecuteQuery(args ...interface{}) (err error) {
 	q.rows, err = q.stmt.Query(args...)
 	return err
 }
@@ -186,7 +186,7 @@ type table struct {
 	db   *sql.DB
 }
 
-func (t *table) Exec(args ...interface{}) (err error) {
+func (t *table) ExecuteQuery(args ...interface{}) (err error) {
 	return
 }
 
