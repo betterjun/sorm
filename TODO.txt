@@ -1,0 +1,13 @@
+1 lock down the query interface, the passing in argument's type
+QueryRow One
+	&normal data
+	&map
+	&struct
+
+Query All
+	&[]struct
+	&[]normal data
+
+2 add Close method for query interface
+
+3 more examples, documentation
