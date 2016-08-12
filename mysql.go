@@ -47,7 +47,7 @@ func (db *database) BindTable(tn string) (t Table) {
 
 func (db *database) CreateQuery(sql string, model interface{}) (q Query, err error) {
 	if db.db != nil {
-		qr := &query{model: model}
+		qr := &query{model: model, sql: sql}
 		qr.stmt, err = db.db.Prepare(sql)
 		if err != nil {
 			return nil, err
@@ -126,6 +126,7 @@ func (db *database) Exec(sql string, args ...interface{}) (res sql.Result, err e
 }
 
 type query struct {
+	sql   string
 	model interface{}
 	stmt  *sql.Stmt
 	rows  *sql.Rows
@@ -133,13 +134,16 @@ type query struct {
 }
 
 func (q *query) ExecuteQuery(args ...interface{}) (err error) {
+	if q.rows != nil {
+		q.rows.Close()
+	}
 	q.rows, err = q.stmt.Query(args...)
 	return err
 }
 
 func (q *query) Next(obj interface{}) (err error) {
 	if q.rows == nil {
-		return fmt.Errorf("not opened")
+		return fmt.Errorf("query is not executed")
 	}
 	if q.cols == nil {
 		q.cols, err = q.rows.Columns()
@@ -149,10 +153,16 @@ func (q *query) Next(obj interface{}) (err error) {
 	}
 
 	scanArgs := getScanFields(obj, q.cols)
+	if scanArgs == nil {
+		return fmt.Errorf("no valid model is created")
+	}
 	if q.rows.Next() {
 		err = q.rows.Scan(scanArgs...)
+		if err != nil {
+			q.rows.Close()
+		}
 	} else {
-		err = fmt.Errorf("eof found")
+		err = fmt.Errorf("end of query results")
 		q.rows.Close()
 	}
 	return err
@@ -160,7 +170,7 @@ func (q *query) Next(obj interface{}) (err error) {
 
 func (q *query) All() (ret []interface{}, err error) {
 	if q.rows == nil {
-		return nil, err
+		return nil, fmt.Errorf("query is not executed")
 	}
 	if q.cols == nil {
 		q.cols, err = q.rows.Columns()
@@ -170,7 +180,12 @@ func (q *query) All() (ret []interface{}, err error) {
 	}
 
 	scanArgs := getScanFields(q.model, q.cols)
+	if scanArgs == nil {
+		return nil, fmt.Errorf("no valid model is created")
+	}
 	defer q.rows.Close()
+	// if not in the below loop, err should be the eof.
+	err = fmt.Errorf("end of query results")
 	for q.rows.Next() {
 		err = q.rows.Scan(scanArgs...)
 		if err != nil {
@@ -178,24 +193,33 @@ func (q *query) All() (ret []interface{}, err error) {
 		}
 		ret = append(ret, reflect.Indirect(reflect.ValueOf(q.model)))
 	}
+	// ret may take back some records, even though there is an error.
 	return ret, err
 }
 
 type table struct {
+	query
 	name string
 	db   *sql.DB
 }
 
 func (t *table) ExecuteQuery(args ...interface{}) (err error) {
-	return
-}
+	if t.db != nil {
+		t.sql = fmt.Sprintf("select * from %v", t.name)
+		t.stmt, err = t.db.Prepare(t.sql)
+		if err != nil {
+			return err
+		}
 
-func (t *table) Next(obj interface{}) (err error) {
-	return
-}
+		if t.rows != nil {
+			t.rows.Close()
+		}
+		t.rows, err = t.stmt.Query(args...)
 
-func (t *table) All() (objs []interface{}, err error) {
-	return
+		// todo: model is a map, shall pass a struct when bind the table?
+	}
+
+	return err
 }
 
 func (t *table) Insert(obj interface{}) (res sql.Result, err error) {
