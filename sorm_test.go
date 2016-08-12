@@ -12,7 +12,7 @@ func printResult(t *testing.T, res sql.Result) {
 }
 
 func TestFunction(t *testing.T) {
-	db := NewDatabase("mysql", "root:root@tcp(127.0.0.1:3306)/world")
+	db := NewDatabase("mysql", "root:betterjun@tcp(127.0.0.1:3306)/pholcus")
 	if db == nil {
 		t.Fatal("create db failed")
 	}
@@ -33,6 +33,13 @@ func TestFunction(t *testing.T) {
 	printResult(t, res)
 
 	sql = "INSERT INTO xx(id, name, dummy) VALUES(1, \"test_name\", \"dummy_string\")"
+	res, err = db.Exec(sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+	printResult(t, res)
+
+	sql = "INSERT INTO xx(id, name, dummy) VALUES(2, \"test_name_2\", \"dummy_string_2\")"
 	res, err = db.Exec(sql)
 	if err != nil {
 		t.Fatal(err)
@@ -77,14 +84,36 @@ func TestFunction(t *testing.T) {
 	}
 	t.Log(*r)
 
+	t.Log("db.Query")
 	// query only supports a struct pointer for model register
 	r = &tbs{}
-	sql = "select * from xx where id=?"
-	all, err := db.Query(sql, r, 1)
+	sql = "select * from xx where id>?"
+	var allrows []tbs
+	err = db.Query(sql, &allrows, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range all {
+	for _, v := range allrows {
+		t.Log(v)
+	}
+
+	si := make([]int, 0)
+	sql = "select id from xx where id>?"
+	err = db.Query(sql, &si, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range si {
+		t.Log(v)
+	}
+
+	ss := make([]string, 0)
+	sql = "select name from xx where id>?"
+	err = db.Query(sql, &ss, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range ss {
 		t.Log(v)
 	}
 
@@ -111,7 +140,7 @@ func TestFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	all, err = q.All()
+	all, err := q.All()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -85,37 +86,85 @@ func (db *database) QueryRow(sql string, objptr interface{}, args ...interface{}
 	return fmt.Errorf("db is not opened")
 }
 
-func (db *database) Query(sql string, model interface{}, args ...interface{}) (objs []interface{}, err error) {
+func (db *database) Query(sql string, objs interface{}, args ...interface{}) (err error) {
 	if db.db != nil {
 		rows, err := db.db.Query(sql, args...)
+		if err != nil {
+			return err
+		}
 		defer rows.Close()
 
 		var cols []string
 		cols, err = rows.Columns()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		scanArgs := getScanFields(model, cols)
-		if scanArgs == nil {
-			return nil, fmt.Errorf("no fields found in the objptr")
+		columnsMp := make(map[string]interface{}, len(cols))
+		refs := make([]interface{}, 0, len(cols))
+		for _, col := range cols {
+			var ref interface{}
+			columnsMp[col] = &ref
+			refs = append(refs, &ref)
 		}
 
-		for _, v := range scanArgs {
-			fmt.Println("sorm :", v)
+		val := reflect.ValueOf(objs)
+		sInd := reflect.Indirect(val)
+		sIndCopy := sInd
+
+		if val.Kind() != reflect.Ptr || sInd.Kind() != reflect.Slice {
+			return fmt.Errorf("<Database.Query> output arg must be use ptr slice")
 		}
 
-		ret := make([]interface{}, 0)
-		for rows.Next() {
-			err = rows.Scan(scanArgs...)
-			if err != nil {
-				break
+		err = fmt.Errorf("no records found")
+		etyp := sInd.Type().Elem()
+		fmt.Println("etyp", etyp)
+		if etyp.Kind() == reflect.Struct {
+			for rows.Next() {
+				err = rows.Scan(refs...)
+				if err != nil {
+					break
+				}
+
+				ind := reflect.New(sInd.Type().Elem()).Elem()
+				for i := 0; i < ind.NumField(); i++ {
+					f := ind.Field(i)
+					fe := ind.Type().Field(i)
+
+					name := fe.Tag.Get("orm")
+					if name == "" {
+						name = strings.ToLower(fe.Name)
+					}
+					if v, ok := columnsMp[name]; ok {
+						value := reflect.ValueOf(v).Elem().Interface()
+						setFieldValue(f, value)
+					}
+				}
+				sIndCopy = reflect.Append(sIndCopy, ind)
 			}
-			ret = append(ret, reflect.Indirect(reflect.ValueOf(model)))
+		} else {
+			if len(cols) > 1 {
+				return fmt.Errorf("the query returns multi coloums, please passing in a struct slice")
+			}
+			for rows.Next() {
+				err = rows.Scan(refs...)
+				if err != nil {
+					break
+				}
+
+				ind := reflect.New(etyp).Elem()
+				if v, ok := columnsMp[cols[0]]; ok {
+					value := reflect.ValueOf(v).Elem().Interface()
+					setFieldValue(ind, value)
+				}
+				sIndCopy = reflect.Append(sIndCopy, ind)
+			}
 		}
-		return ret, err
+
+		sInd.Set(sIndCopy)
+		return err
 	}
-	return nil, fmt.Errorf("db is not opened")
+	return fmt.Errorf("db is not opened")
 }
 
 func (db *database) Exec(sql string, args ...interface{}) (res sql.Result, err error) {

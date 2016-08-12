@@ -53,8 +53,7 @@ type Database interface {
 	CreateQuery(sql string, model interface{}) (Query, error)
 
 	QueryRow(sql string, obj interface{}, args ...interface{}) error
-	//Query(sql string, model interface{}, objs interface{}, args ...interface{}) error
-	Query(sql string, model interface{}, args ...interface{}) (objs []interface{}, err error)
+	Query(sql string, objs interface{}, args ...interface{}) (err error)
 
 	// if args[0] is a struct, use it's field
 	Exec(sql string, args ...interface{}) (sql.Result, error)
