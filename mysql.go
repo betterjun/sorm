@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
-	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -100,65 +99,40 @@ func (db *database) Query(sql string, objs interface{}, args ...interface{}) (er
 			return err
 		}
 
-		columnsMp := make(map[string]interface{}, len(cols))
-		refs := make([]interface{}, 0, len(cols))
-		for _, col := range cols {
-			var ref interface{}
-			columnsMp[col] = &ref
-			refs = append(refs, &ref)
-		}
-
 		val := reflect.ValueOf(objs)
 		sInd := reflect.Indirect(val)
-		sIndCopy := sInd
 
 		if val.Kind() != reflect.Ptr || sInd.Kind() != reflect.Slice {
 			return fmt.Errorf("<Database.Query> output arg must be use ptr slice")
 		}
 
-		err = fmt.Errorf("no records found")
+		var scanArgs []interface{}
+		var ind reflect.Value
 		etyp := sInd.Type().Elem()
-		fmt.Println("etyp", etyp)
 		if etyp.Kind() == reflect.Struct {
-			for rows.Next() {
-				err = rows.Scan(refs...)
-				if err != nil {
-					break
-				}
-
-				ind := reflect.New(sInd.Type().Elem()).Elem()
-				for i := 0; i < ind.NumField(); i++ {
-					f := ind.Field(i)
-					fe := ind.Type().Field(i)
-
-					name := fe.Tag.Get("orm")
-					if name == "" {
-						name = strings.ToLower(fe.Name)
-					}
-					if v, ok := columnsMp[name]; ok {
-						value := reflect.ValueOf(v).Elem().Interface()
-						setFieldValue(f, value)
-					}
-				}
-				sIndCopy = reflect.Append(sIndCopy, ind)
+			ind = reflect.New(sInd.Type().Elem()).Elem()
+			scanArgs = getScanFieldFromStruct(ind, cols)
+			if scanArgs == nil {
+				return fmt.Errorf("no fields found in the objptr")
 			}
 		} else {
 			if len(cols) > 1 {
 				return fmt.Errorf("the query returns multi coloums, please passing in a struct slice")
 			}
-			for rows.Next() {
-				err = rows.Scan(refs...)
-				if err != nil {
-					break
-				}
 
-				ind := reflect.New(etyp).Elem()
-				if v, ok := columnsMp[cols[0]]; ok {
-					value := reflect.ValueOf(v).Elem().Interface()
-					setFieldValue(ind, value)
-				}
-				sIndCopy = reflect.Append(sIndCopy, ind)
+			ind = reflect.New(etyp).Elem()
+			scanArgs = []interface{}{ind.Addr().Interface()}
+		}
+
+		sIndCopy := sInd
+		err = fmt.Errorf("no records found")
+		for rows.Next() {
+			err = rows.Scan(scanArgs...)
+			if err != nil {
+				break
 			}
+
+			sIndCopy = reflect.Append(sIndCopy, ind)
 		}
 
 		sInd.Set(sIndCopy)

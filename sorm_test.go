@@ -96,6 +96,7 @@ func TestFunction(t *testing.T) {
 	for _, v := range allrows {
 		t.Log(v)
 	}
+	//return
 
 	si := make([]int, 0)
 	sql = "select id from xx where id>?"
