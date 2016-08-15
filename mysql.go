@@ -45,9 +45,9 @@ func (db *database) BindTable(tn string) (t Table) {
 	return t
 }
 
-func (db *database) CreateQuery(sql string, model interface{}) (q Query, err error) {
+func (db *database) CreateQuery(sql string) (q Query, err error) {
 	if db.db != nil {
-		qr := &query{model: model, sql: sql}
+		qr := &query{sql: sql}
 		qr.stmt, err = db.db.Prepare(sql)
 		if err != nil {
 			return nil, err
@@ -150,7 +150,6 @@ func (db *database) Exec(sql string, args ...interface{}) (res sql.Result, err e
 
 type query struct {
 	sql   string
-	model interface{}
 	stmt  *sql.Stmt
 	rows  *sql.Rows
 	cols  []string
@@ -174,50 +173,68 @@ func (q *query) Next(obj interface{}) (err error) {
 			return err
 		}
 	}
-
-	scanArgs := getScanFields(obj, q.cols)
-	if scanArgs == nil {
-		return fmt.Errorf("no valid model is created")
-	}
+	
 	if q.rows.Next() {
-		err = q.rows.Scan(scanArgs...)
-		if err != nil {
-			q.rows.Close()
+		scanArgs := getScanFields(obj, q.cols)
+		if scanArgs == nil {
+			return fmt.Errorf("no fields found in the objptr")
 		}
+
+		return q.rows.Scan(scanArgs...)
 	} else {
-		err = fmt.Errorf("end of query results")
 		q.rows.Close()
+		return fmt.Errorf("end of query results")
 	}
-	return err
 }
 
-func (q *query) All() (ret []interface{}, err error) {
-	if q.rows == nil {
-		return nil, fmt.Errorf("query is not executed")
-	}
-	if q.cols == nil {
-		q.cols, err = q.rows.Columns()
-		if err != nil {
-			return nil, err
-		}
+func (q *query) All(objs interface{}) (err error) {
+	val := reflect.ValueOf(objs)
+	sInd := reflect.Indirect(val)
+	if val.Kind() != reflect.Ptr || sInd.Kind() != reflect.Slice {
+		return fmt.Errorf("<Query.All> output arg must be use ptr slice")
 	}
 
-	scanArgs := getScanFields(q.model, q.cols)
-	if scanArgs == nil {
-		return nil, fmt.Errorf("no valid model is created")
+	if q.rows == nil {
+		return fmt.Errorf("query is not executed")
+	}
+	cols, err := q.rows.Columns()
+	if err != nil {
+		return err
 	}
 	defer q.rows.Close()
-	// if not in the below loop, err should be the eof.
-	err = fmt.Errorf("end of query results")
+	
+	var scanArgs []interface{}
+	var ind reflect.Value
+	etyp := sInd.Type().Elem()
+	if etyp.Kind() == reflect.Struct {
+		ind = reflect.New(sInd.Type().Elem()).Elem()
+		scanArgs = getScanFieldFromStruct(ind, cols)
+		if scanArgs == nil {
+			return fmt.Errorf("no fields found in the objptr")
+		}
+	} else {
+		if len(cols) > 1 {
+			return fmt.Errorf("the query returns multi coloums, please passing in a struct slice")
+		}
+
+		ind = reflect.New(etyp).Elem()
+		scanArgs = []interface{}{ind.Addr().Interface()}
+	}
+
+	sIndCopy := sInd
+	err = fmt.Errorf("no records found")
 	for q.rows.Next() {
 		err = q.rows.Scan(scanArgs...)
 		if err != nil {
 			break
 		}
-		ret = append(ret, reflect.Indirect(reflect.ValueOf(q.model)))
+
+		sIndCopy = reflect.Append(sIndCopy, ind)
 	}
+
 	// ret may take back some records, even though there is an error.
-	return ret, err
+	sInd.Set(sIndCopy)
+	return err
 }
 
 type table struct {
@@ -238,8 +255,6 @@ func (t *table) ExecuteQuery(args ...interface{}) (err error) {
 			t.rows.Close()
 		}
 		t.rows, err = t.stmt.Query(args...)
-
-		// todo: model is a map, shall pass a struct when bind the table?
 	}
 
 	return err

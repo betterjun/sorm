@@ -50,7 +50,7 @@ func (db *basedb) SetMaxOpenConns(n int) {
 
 type Database interface {
 	BindTable(tn string) Table
-	CreateQuery(sql string, model interface{}) (Query, error)
+	CreateQuery(sql string) (Query, error)
 
 	QueryRow(sql string, obj interface{}, args ...interface{}) error
 	Query(sql string, objs interface{}, args ...interface{}) (err error)
@@ -88,7 +88,7 @@ type Query interface {
 	ExecuteQuery(args ...interface{}) error
 	// after calling Exec, you can ethier Next nor All. Both Next and All will release the conn after the end.
 	Next(obj interface{}) error
-	All() (objs []interface{}, err error)
+	All(objs interface{}) (err error)
 
 	//Columns() ([]string, error)
 }

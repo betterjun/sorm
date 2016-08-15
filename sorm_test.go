@@ -12,7 +12,7 @@ func printResult(t *testing.T, res sql.Result) {
 }
 
 func TestFunction(t *testing.T) {
-	db := NewDatabase("mysql", "root:betterjun@tcp(127.0.0.1:3306)/pholcus")
+	db := NewDatabase("mysql", "root:root@tcp(127.0.0.1:3306)/world")
 	if db == nil {
 		t.Fatal("create db failed")
 	}
@@ -120,7 +120,7 @@ func TestFunction(t *testing.T) {
 
 	// test query
 	sql = "select * from xx where id=?"
-	q, err := db.CreateQuery(sql, r)
+	q, err := db.CreateQuery(sql)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,13 +141,15 @@ func TestFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	all, err := q.All()
+	var all []tbs
+	err = q.All(&all)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, v := range all {
 		t.Log(v)
 	}
+	all = nil
 
 	// test table
 	tb := db.BindTable("xx")
@@ -171,13 +173,14 @@ func TestFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	all, err = tb.All()
+	err = tb.All(&all)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, v := range all {
 		t.Log(v)
 	}
+	all = nil
 
 	res, err = tb.Update(r)
 	if err != nil {
