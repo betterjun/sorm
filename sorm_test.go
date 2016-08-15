@@ -12,7 +12,7 @@ func printResult(t *testing.T, res sql.Result) {
 }
 
 func TestFunction(t *testing.T) {
-	db := NewDatabase("mysql", "root:root@tcp(127.0.0.1:3306)/world")
+	db := NewDatabase("mysql", "root:betterjun@tcp(127.0.0.1:3306)/pholcus")
 	if db == nil {
 		t.Fatal("create db failed")
 	}
@@ -153,10 +153,6 @@ func TestFunction(t *testing.T) {
 
 	// test table
 	tb := db.BindTable("xx")
-	res, err = tb.Insert(r)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	err = tb.ExecuteQuery()
 	if err != nil {
@@ -182,17 +178,24 @@ func TestFunction(t *testing.T) {
 	}
 	all = nil
 
-	res, err = tb.Update(r)
+	type tableStruct struct {
+		SId   int    `orm:"pk=1;fn=id"`
+		Name  string `orm:"fn=name"`
+		Dummy string `orm:_`
+	}
+
+	ts := &tableStruct{SId: 1000, Name: "fn=name", Dummy: "ignored"}
+	res, err = tb.Update(ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	res, err = tb.Delete(r)
+	res, err = tb.Delete(ts)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	res, err = tb.Insert(r)
+	res, err = tb.Insert(ts)
 	if err != nil {
 		t.Fatal(err)
 	}

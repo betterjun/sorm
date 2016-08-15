@@ -149,10 +149,10 @@ func (db *database) Exec(sql string, args ...interface{}) (res sql.Result, err e
 }
 
 type query struct {
-	sql   string
-	stmt  *sql.Stmt
-	rows  *sql.Rows
-	cols  []string
+	sql  string
+	stmt *sql.Stmt
+	rows *sql.Rows
+	cols []string
 }
 
 func (q *query) ExecuteQuery(args ...interface{}) (err error) {
@@ -173,7 +173,7 @@ func (q *query) Next(obj interface{}) (err error) {
 			return err
 		}
 	}
-	
+
 	if q.rows.Next() {
 		scanArgs := getScanFields(obj, q.cols)
 		if scanArgs == nil {
@@ -202,7 +202,7 @@ func (q *query) All(objs interface{}) (err error) {
 		return err
 	}
 	defer q.rows.Close()
-	
+
 	var scanArgs []interface{}
 	var ind reflect.Value
 	etyp := sInd.Type().Elem()
@@ -261,7 +261,36 @@ func (t *table) ExecuteQuery(args ...interface{}) (err error) {
 }
 
 func (t *table) Insert(obj interface{}) (res sql.Result, err error) {
-	return
+	if t.db != nil {
+		obv := reflect.ValueOf(obj).Elem()
+		tis := getFieldInfoFromStruct(obv)
+		insertSql := fmt.Sprintf("insert into %v(", t.name)
+		valueSql := "("
+		if len(tis) == 0 {
+			return
+		}
+
+		args := make([]interface{}, 0)
+		for _, v := range tis {
+			if v.fn == "_" {
+				continue
+			}
+
+			insertSql += v.fn + ","
+			valueSql += fmt.Sprintf("?,")
+			args = append(args, v.fp.Interface())
+		}
+
+		if len(args) == 0 {
+			return nil, fmt.Errorf("no valid fields found in the object")
+		}
+
+		sql := insertSql[0:len(insertSql)-1] + ") values" + valueSql[0:len(valueSql)-1] + ")"
+		fmt.Println("table.Insert", sql)
+		return t.db.Exec(sql, args...)
+	}
+
+	return nil, fmt.Errorf("db is not opened")
 }
 
 func (t *table) Delete(obj interface{}) (res sql.Result, err error) {
