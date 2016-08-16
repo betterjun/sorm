@@ -182,8 +182,16 @@ func TestFunction(t *testing.T) {
 	all = nil
 
 	ts := &tbs{SId: 1000, Name: "fn=name", Dummy: "ignored"}
-
 	res, err = tb.Insert(ts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	printResult(t, res)
+
+	args := make(map[string]interface{})
+	args["id"] = 2000
+	args["name"] = "inserte by map"
+	res, err = tb.Insert(&args)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,6 +205,12 @@ func TestFunction(t *testing.T) {
 	printResult(t, res)
 
 	res, err = tb.Delete(ts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	printResult(t, res)
+
+	res, err = tb.Delete(&args)
 	if err != nil {
 		t.Fatal(err)
 	}
