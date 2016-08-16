@@ -6,9 +6,12 @@ import (
 )
 
 func printResult(t *testing.T, res sql.Result) {
+	if res == nil {
+		return
+	}
 	lii, _ := res.LastInsertId()
 	ra, _ := res.RowsAffected()
-	t.Log("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 }
 
 func TestFunction(t *testing.T) {
@@ -70,9 +73,9 @@ func TestFunction(t *testing.T) {
 	t.Logf("query a map value ok, id=%v, name=%v, dummy=%v\n", id, name, dummy)
 
 	type tbs struct {
-		SId   int `orm:"id"`
-		Name  string
-		Dummy string `orm:_`
+		SId   int    `orm:"pk=1;fn=id"`
+		Name  string `orm:"fn=name"`
+		Dummy string `orm:"fn=dummy`
 	}
 	r := &tbs{}
 
@@ -178,26 +181,25 @@ func TestFunction(t *testing.T) {
 	}
 	all = nil
 
-	type tableStruct struct {
-		SId   int    `orm:"pk=1;fn=id"`
-		Name  string `orm:"fn=name"`
-		Dummy string `orm:_`
-	}
-
-	ts := &tableStruct{SId: 1000, Name: "fn=name", Dummy: "ignored"}
-	res, err = tb.Update(ts)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	res, err = tb.Delete(ts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ts := &tbs{SId: 1000, Name: "fn=name", Dummy: "ignored"}
 
 	res, err = tb.Insert(ts)
 	if err != nil {
 		t.Fatal(err)
 	}
+	printResult(t, res)
+
+	ts.Name = "ts"
+	res, err = tb.Update(ts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	printResult(t, res)
+
+	res, err = tb.Delete(ts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	printResult(t, res)
 
 }

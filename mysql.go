@@ -261,6 +261,8 @@ func (t *table) ExecuteQuery(args ...interface{}) (err error) {
 }
 
 func (t *table) Insert(obj interface{}) (res sql.Result, err error) {
+	// obj 可以为对象
+	// 也可以为map[string]interface{}
 	if t.db != nil {
 		obv := reflect.ValueOf(obj).Elem()
 		tis := getFieldInfoFromStruct(obv)
@@ -294,9 +296,68 @@ func (t *table) Insert(obj interface{}) (res sql.Result, err error) {
 }
 
 func (t *table) Delete(obj interface{}) (res sql.Result, err error) {
-	return
+	// obj 可以为对象，根据pk来删除
+	// 也可以为map[string]interface{}
+	if t.db != nil {
+		obv := reflect.ValueOf(obj).Elem()
+		tis := getFieldInfoFromStruct(obv)
+		if len(tis) == 0 {
+			return
+		}
+
+		for _, v := range tis {
+			if v.pk == true {
+				//sql := fmt.Sprintf("update %v set %v=?", t.name, v.fn)
+				sql := fmt.Sprintf("delete from %v where %v=?", t.name, v.fn)
+				fmt.Println("table.Delete", sql)
+				return t.db.Exec(sql, v.fp.Interface())
+			}
+		}
+		return nil, fmt.Errorf("no pk found")
+	}
+
+	return nil, fmt.Errorf("db is not opened")
 }
 
 func (t *table) Update(obj interface{}) (res sql.Result, err error) {
-	return
+	// obj 可以为对象，根据pk来更新
+	// Update(key, value) key,value都是map[string]interface{}
+
+	if t.db != nil {
+		obv := reflect.ValueOf(obj).Elem()
+		tis := getFieldInfoFromStruct(obv)
+		updateSql := fmt.Sprintf("update %v set ", t.name)
+		whereSql := ""
+		if len(tis) == 0 {
+			return
+		}
+
+		args := make([]interface{}, 0)
+		var whereArgs interface{}
+		for _, v := range tis {
+			if v.fn == "_" {
+				continue
+			} else if v.pk {
+				whereSql += fmt.Sprintf(" where %v=?", v.fn)
+				whereArgs = v.fp.Interface()
+			} else {
+				updateSql += v.fn + "=?, "
+				args = append(args, v.fp.Interface())
+			}
+		}
+
+		if whereArgs == nil {
+			return nil, fmt.Errorf("no pk field found in the object")
+		}
+		if len(args) == 0 {
+			return nil, fmt.Errorf("no valid fields found in the object")
+		}
+		args = append(args, whereArgs)
+
+		sql := updateSql[0:len(updateSql)-2] + whereSql
+		fmt.Println("table.Update", sql)
+		return t.db.Exec(sql, args...)
+	}
+
+	return nil, fmt.Errorf("db is not opened")
 }

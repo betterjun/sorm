@@ -2,6 +2,7 @@ package sorm
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -59,14 +60,10 @@ func getFieldsFromStruct(v reflect.Value) (fields map[string]interface{}) {
 	fields = make(map[string]interface{})
 	for i := 0; i < v.NumField(); i++ {
 		fieldInfo := v.Type().Field(i) // a reflect.StructField
-		tag := fieldInfo.Tag           // a reflect.StructTag
-		name := tag.Get("orm")
-		if name == "" {
-			name = strings.ToLower(fieldInfo.Name)
+		ti := parseTag(fieldInfo.Name, fieldInfo.Tag.Get("orm"))
+		if ti != nil && ti.fn != "_" {
+			fields[ti.fn] = v.Field(i).Addr().Interface()
 		}
-		//fmt.Println("name =", name, ",val =", v.Field(i).Addr(), v.Field(i).Addr().Elem(), v.Field(i).Addr().Elem().CanAddr())
-		// take the addr and as interface{}, this is required by sql Scan
-		fields[name] = v.Field(i).Addr().Interface()
 	}
 
 	return fields
@@ -85,7 +82,7 @@ func getFieldInfoFromStruct(v reflect.Value) (fields map[string]*tagInfo) {
 		fieldInfo := v.Type().Field(i) // a reflect.StructField
 		tag := fieldInfo.Tag           // a reflect.StructTag
 
-		ti := parseTag(strings.ToLower(fieldInfo.Name), tag.Get("orm"))
+		ti := parseTag(fieldInfo.Name, tag.Get("orm"))
 		ti.fp = v.Field(i).Addr()
 		if ti != nil && ti.fn != "_" {
 			fields[ti.fn] = ti
@@ -104,20 +101,24 @@ func parseTag(fieldName, tag string) (ti *tagInfo) {
 	fieldName = strings.ToLower(fieldName)
 
 	ti = &tagInfo{fn: fieldName, pk: false, ignored: false}
+	fmt.Println(1, fieldName)
 
 	tags := strings.Split(tag, ";")
 	if len(tags) > 0 {
 		for _, kvp := range tags {
+			fmt.Printf("tag %q\n", kvp)
 			kvp = strings.TrimSpace(kvp)
 			if kvp == "_" {
 				ti.fn = "_"
 				ti.pk = false
 				ti.ignored = true
+				fmt.Println(2, ti.fn)
 				continue
 			}
 
 			kv := strings.Split(kvp, "=")
 			if len(kv) != 2 { // wrong format of orm, just use fieldname
+				fmt.Println(3, fieldName)
 				continue
 			}
 			kv[0] = strings.TrimSpace(kv[0])
@@ -130,10 +131,13 @@ func parseTag(fieldName, tag string) (ti *tagInfo) {
 					ti.fn = "_"
 					ti.pk = false
 					ti.ignored = true
+					fmt.Println(4, ti.fn)
 				} else if kv[1] == "" {
 					ti.fn = fieldName
+					fmt.Println(5, ti.fn)
 				} else {
 					ti.fn = kv[1]
+					fmt.Println(6, ti.fn)
 				}
 			}
 		}
