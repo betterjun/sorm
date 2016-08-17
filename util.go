@@ -9,12 +9,6 @@ import (
 )
 
 func getScanFields(ptr interface{}, cols []string) (scanArgs []interface{}) {
-	/*
-		如果ptr是指针，则取第一个
-		如果ptr是map[string]interface{}，则取对应的值做参数,interface{}必须也为指针
-		如果ptr是struct，则取对应的字段做参数,
-		其他视为无效
-	*/
 	v := reflect.ValueOf(ptr)
 	switch v.Kind() {
 	case reflect.Ptr: // only accept pointer

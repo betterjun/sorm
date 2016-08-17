@@ -1,168 +1,277 @@
 package sorm
 
 import (
-	"database/sql"
+	"fmt"
 	"testing"
+	"time"
 )
 
-func printResult(t *testing.T, res sql.Result) {
-	if res == nil {
-		return
-	}
-	lii, _ := res.LastInsertId()
-	ra, _ := res.RowsAffected()
-	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+type tbs struct {
+	SId   int    `orm:"pk=1;fn=id"`
+	Name  string `orm:"_"`
+	Dummy string `orm:"fn=dummy"`
 }
 
-func TestFunction(t *testing.T) {
+func TestDatabase(t *testing.T) {
 	db := NewDatabase("mysql", "root:betterjun@tcp(127.0.0.1:3306)/pholcus")
 	if db == nil {
-		t.Fatal("create db failed")
+		t.Fatal("TestDatabase: create db failed")
 	}
-	defer db.Close()
 
+	// test Exec without args
 	sql := "DROP TABLE IF EXISTS xx"
 	res, err := db.Exec(sql)
 	if err != nil {
 		t.Fatal(err)
 	}
-	printResult(t, res)
+	lii, _ := res.LastInsertId()
+	ra, _ := res.RowsAffected()
+	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 
 	sql = "CREATE TABLE xx(id int, name varchar(255), dummy varchar(255))"
 	res, err = db.Exec(sql)
 	if err != nil {
 		t.Fatal(err)
 	}
-	printResult(t, res)
+	lii, _ = res.LastInsertId()
+	ra, _ = res.RowsAffected()
+	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 
-	sql = "INSERT INTO xx(id, name, dummy) VALUES(1, \"test_name\", \"dummy_string\")"
-	res, err = db.Exec(sql)
-	if err != nil {
-		t.Fatal(err)
+	// test Exec with args
+	count := 4
+	for i := 1; i < count; i++ {
+		sql = "INSERT INTO xx(id, name, dummy) VALUES(?,?,?)"
+		res, err = db.Exec(sql, i, fmt.Sprintf("name%v", i), fmt.Sprintf("dummy%v", i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		lii, _ = res.LastInsertId()
+		ra, _ = res.RowsAffected()
+		t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 	}
-	printResult(t, res)
 
-	sql = "INSERT INTO xx(id, name, dummy) VALUES(2, \"test_name_2\", \"dummy_string_2\")"
-	res, err = db.Exec(sql)
-	if err != nil {
-		t.Fatal(err)
-	}
-	printResult(t, res)
-
-	// select a single value
-	sql = "select id from xx"
-	var id int64
-	err = db.QueryRow(sql, &id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("query a single value ok, id=%v\n", id)
-
-	// select a map value
+	// test QueryRow, built-in type pointer
+	sql = "select name from xx where id=?"
 	var name string
+	err = db.QueryRow(sql, &name, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != "name1" {
+		t.Errorf("test QueryRow, built-in type pointer failed, name=%v, expect \"name1\"\n", name)
+	}
+	t.Logf("test QueryRow, built-in type pointer ok")
+
+	// test QueryRow, map of pointers
+	name = ""
+	var id int64
 	var dummy string
 	mm := make(map[string]interface{})
 	mm["id"] = &id
 	mm["name"] = &name
 	mm["dummy"] = &dummy
-	sql = "select id, name from xx"
-	err = db.QueryRow(sql, &mm)
+	sql = "select id, name from xx where id = ?"
+	err = db.QueryRow(sql, &mm, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("query a map value ok, id=%v, name=%v, dummy=%v\n", id, name, dummy)
-
-	type tbs struct {
-		SId   int    `orm:"pk=1;fn=id"`
-		Name  string `orm:"fn=name"`
-		Dummy string `orm:"fn=dummy`
+	if id != 2 {
+		t.Errorf("test QueryRow, map of pointers failed, id=%v, expect 2\n", id)
 	}
+	if name != "name2" {
+		t.Errorf("test QueryRow, map of pointers failed, name=%q, expect \"name2\"\n", name)
+	}
+	if dummy != "" {
+		t.Errorf("test QueryRow, map of pointers failed, dummy=%q, expect \"\"\n", dummy)
+	}
+	t.Logf("test QueryRow, map of pointers ok")
+
 	r := &tbs{}
 
-	// select a struct value
+	// test QueryRow, a struct pointer
 	sql = "select * from xx where id=?"
-	err = db.QueryRow(sql, r, 1)
+	err = db.QueryRow(sql, r, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(*r)
+	if r.SId != 3 {
+		t.Errorf("test QueryRow, a struct pointer failed, r.SId=%v, expect 3\n", r.SId)
+	}
+	if r.Name != "" {
+		t.Errorf("test QueryRow, a struct pointer failed, r.Name=%q, expect \"\"\n", r.Name)
+	}
+	if r.Dummy != "dummy3" {
+		t.Errorf("test QueryRow, a struct pointer failed, r.Dummy=%q, expect \"dummy3\"\n", r.Dummy)
+	}
+	t.Logf("test QueryRow, a struct pointer ok")
 
-	t.Log("db.Query")
-	// query only supports a struct pointer for model register
+	// test Query, a struct slice
 	r = &tbs{}
-	sql = "select * from xx where id>?"
+	sql = "select * from xx where id>? and id<? order by id asc"
 	var allrows []tbs
-	err = db.Query(sql, &allrows, 0)
+	err = db.Query(sql, &allrows, 0, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range allrows {
-		t.Log(v)
+	if len(allrows) != 3 {
+		t.Errorf("test Query, a struct slice failed, slice length=%v, expect 3\n", len(allrows))
 	}
-	//return
+	for i, r := range allrows {
+		if r.SId != i+1 {
+			t.Errorf("test Query, a struct slice failed, r.SId=%v, expect %v\n", r.SId, i+1)
+		}
+		if r.Name != "" {
+			t.Errorf("test Query, a struct slice failed, r.Name=%q, expect \"\"\n", r.Name)
+		}
+		if r.Dummy != fmt.Sprintf("dummy%v", i+1) {
+			t.Errorf("test Query, a struct slice failed, r.Dummy=%q, expect %q\n", r.Dummy, fmt.Sprintf("dummy%v", i+1))
+		}
+	}
+	t.Logf("test Query, a struct slice ok")
 
+	// test Query, a built-in type slice
 	si := make([]int, 0)
 	sql = "select id from xx where id>?"
 	err = db.Query(sql, &si, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range si {
-		t.Log(v)
+	for i, v := range si {
+		if v != i+1 {
+			t.Errorf("test Query, a built-in type slice failed, id=%v, expect %v\n", v, i+1)
+		}
 	}
+	t.Logf("test Query, a built-in type slice")
 
-	ss := make([]string, 0)
-	sql = "select name from xx where id>?"
-	err = db.Query(sql, &ss, 0)
+	db.SetConnMaxLifetime(time.Duration(10))
+	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(10)
+
+	err = db.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range ss {
-		t.Log(v)
-	}
+}
 
-	// test query
-	sql = "select * from xx where id=?"
+func TestQuery(t *testing.T) {
+	db := NewDatabase("mysql", "root:betterjun@tcp(127.0.0.1:3306)/pholcus")
+	if db == nil {
+		t.Fatal("TestDatabase: create db failed")
+	}
+	defer db.Close()
+
+	// test CreateQuery
+	sql := "select * from xx where id=?"
 	q, err := db.CreateQuery(sql)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("CreateQuery ok")
 
+	// test ExecuteQuery
 	err = q.ExecuteQuery(1)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("ExecuteQuery ok")
 
-	r = &tbs{}
-	//t.Log("bb", *r)
+	// test Next
+	count := 0
+	r := &tbs{}
 	for q.Next(r) == nil {
-		t.Log(*r)
+		if r.SId != 1 {
+			t.Errorf("test Next failed, r.SId=%v, expect 1\n", r.SId)
+		}
+		count++
+	}
+	if count != 1 {
+		t.Errorf("test Next failed, got %v records, expect 1\n", count)
 	}
 
-	err = q.ExecuteQuery(1)
+	err = q.ExecuteQuery(2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var all []tbs
-	err = q.All(&all)
+	count = 0
+	var id int64
+	for {
+		err = q.Next(&id)
+		if err != nil {
+			if err.Error() == "end of query results" {
+				break
+			}
+			t.Fatal(err)
+		}
+		if id != 2 {
+			t.Errorf("test Next failed, id=%v, expect 2\n", id)
+		}
+		count++
+	}
+	if count != 1 {
+		t.Errorf("test Next failed, got %v records, expect 1\n", count)
+	}
+
+	err = q.ExecuteQuery(3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range all {
-		t.Log(v)
+
+	err = q.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
-	all = nil
+
+	// test All
+	sql = "select * from xx where id>? and id<? order by id asc"
+	q, err = db.CreateQuery(sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = q.ExecuteQuery(0, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var allrows []tbs
+	err = q.All(&allrows)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(allrows) != 3 {
+		t.Errorf("test All failed, slice length=%v, expect 3\n", len(allrows))
+	}
+	for i, r := range allrows {
+		if r.SId != i+1 {
+			t.Errorf("test All failed, r.SId=%v, expect %v\n", r.SId, i+1)
+		}
+		if r.Name != "" {
+			t.Errorf("test All failed, r.Name=%q, expect \"\"\n", r.Name)
+		}
+		if r.Dummy != fmt.Sprintf("dummy%v", i+1) {
+			t.Errorf("test All failed, r.Dummy=%q, expect %q\n", r.Dummy, fmt.Sprintf("dummy%v", i+1))
+		}
+	}
+	t.Logf("test All ok")
+}
+
+func TestTable(t *testing.T) {
+	db := NewDatabase("mysql", "root:betterjun@tcp(127.0.0.1:3306)/pholcus")
+	if db == nil {
+		t.Fatal("TestDatabase: create db failed")
+	}
+	defer db.Close()
 
 	// test table
 	tb := db.BindTable("xx")
 
-	err = tb.ExecuteQuery()
+	err := tb.ExecuteQuery()
 	if err != nil {
 		t.Fatal(err)
 	}
-	r = &tbs{}
-	//t.Log("bb", *r)
+	r := &tbs{}
+
 	for tb.Next(r) == nil {
 		t.Log(*r)
 	}
@@ -172,21 +281,24 @@ func TestFunction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = tb.All(&all)
+	allrows := make([]tbs, 0)
+	err = tb.All(&allrows)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, v := range all {
+	for _, v := range allrows {
 		t.Log(v)
 	}
-	all = nil
+	allrows = nil
 
 	ts := &tbs{SId: 1000, Name: "fn=name", Dummy: "ignored"}
-	res, err = tb.Insert(ts)
+	res, err := tb.Insert(ts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	printResult(t, res)
+	lii, _ := res.LastInsertId()
+	ra, _ := res.RowsAffected()
+	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 
 	args := make(map[string]interface{})
 	args["id"] = 2000
@@ -195,25 +307,33 @@ func TestFunction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	printResult(t, res)
+	lii, _ = res.LastInsertId()
+	ra, _ = res.RowsAffected()
+	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 
 	ts.Name = "ts"
 	res, err = tb.Update(ts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	printResult(t, res)
+	lii, _ = res.LastInsertId()
+	ra, _ = res.RowsAffected()
+	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 
 	res, err = tb.Delete(ts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	printResult(t, res)
+	lii, _ = res.LastInsertId()
+	ra, _ = res.RowsAffected()
+	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 
 	res, err = tb.Delete(&args)
 	if err != nil {
 		t.Fatal(err)
 	}
-	printResult(t, res)
+	lii, _ = res.LastInsertId()
+	ra, _ = res.RowsAffected()
+	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 
 }

@@ -89,6 +89,7 @@ type Query interface {
 	// after calling Exec, you can ethier Next nor All. Both Next and All will release the conn after the end.
 	Next(obj interface{}) error
 	All(objs interface{}) (err error)
+	Close() error
 
 	//Columns() ([]string, error)
 }

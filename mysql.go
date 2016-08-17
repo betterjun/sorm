@@ -156,9 +156,7 @@ type query struct {
 }
 
 func (q *query) ExecuteQuery(args ...interface{}) (err error) {
-	if q.rows != nil {
-		q.rows.Close()
-	}
+	err = q.Close()
 	q.rows, err = q.stmt.Query(args...)
 	return err
 }
@@ -234,6 +232,15 @@ func (q *query) All(objs interface{}) (err error) {
 
 	// ret may take back some records, even though there is an error.
 	sInd.Set(sIndCopy)
+	return err
+}
+
+func (q *query) Close() (err error) {
+	if q.rows != nil {
+		err = q.rows.Close()
+		q.rows = nil
+	}
+	q.cols = nil
 	return err
 }
 
