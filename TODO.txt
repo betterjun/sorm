@@ -1,13 +1,36 @@
-1 lock down the query interface, the passing in argument's type
-QueryRow One
-	&normal data
-	&map
-	&struct
+1 lock down the arguments type for methods
+database.QueryRow
+	pointer of built-in type(bool,byte,int...)
+	pointer of map[string]interface{}
+	pointer of struct
 
-Query All
-	&[]struct
-	&[]normal data
+database.Query
+	pointer of []built-in type(bool,byte,int...)
+	pointer of []struct
+	
 
-2 add Close method for query interface
+query.Next
+	pointer of built-in type(bool,byte,int...)
+	pointer of map[string]interface{}
+	pointer of struct
 
-3 more examples, documentation
+query.All
+	pointer of []built-in type(bool,byte,int...)
+	pointer of []struct
+
+
+table.Insert(obj interface{}) (sql.Result, error)
+	pointer of map[string]interface{}
+	pointer of struct
+
+table.Delete(obj interface{}) (sql.Result, error)
+	pointer of map[string]interface{}
+	pointer of struct
+
+table.Update(obj interface{}) (sql.Result, error)
+	pointer of struct
+
+table.UpdateByKeys(keys, values map[string]interface{}) (sql.Result, error)
+	pointer of map[string]interface{}
+
+2 more examples, documentation
