@@ -52,6 +52,7 @@ type Database interface {
 	BindTable(tn string) Table
 	CreateQuery(sql string) (Query, error)
 
+	// no need to keep the two method?
 	QueryRow(sql string, obj interface{}, args ...interface{}) error
 	Query(sql string, objs interface{}, args ...interface{}) (err error)
 
@@ -70,26 +71,20 @@ type Table interface {
 	// by pk
 	Delete(obj interface{}) (sql.Result, error)
 	Update(obj interface{}) (sql.Result, error)
-	//Count(obj interface{}) (int64, error)
 
 	//Drop() error
 	//Truncate() error
-	/*
-		SetPrimaryKey(name string)
-		SetField(fn string, ignore bool)
-		SetIgnoredField(fn string)
-	*/
-	// supported tags
-	// `fn:"field_name" pk:"1"`
 }
 
 type Query interface {
 	// need first call Exec
-	ExecuteQuery(args ...interface{}) error
+	Exec(args ...interface{}) error
 	// after calling Exec, you can ethier Next nor All. Both Next and All will release the conn after the end.
-	Next(obj interface{}) error
+	Next(obj interface{}, args ...interface{}) error
 	All(objs interface{}) (err error)
 	Close() error
 
+	//Count(filter interface{}) (int64, error)
 	//Columns() ([]string, error)
+	//Filter()
 }

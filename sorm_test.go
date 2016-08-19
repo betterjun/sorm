@@ -172,12 +172,12 @@ func TestQuery(t *testing.T) {
 	}
 	t.Logf("CreateQuery ok")
 
-	// test ExecuteQuery
-	err = q.ExecuteQuery(1)
+	// test Exec
+	err = q.Exec(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("ExecuteQuery ok")
+	t.Logf("Exec ok")
 
 	// test Next struct
 	count := 0
@@ -200,7 +200,7 @@ func TestQuery(t *testing.T) {
 	mm["id"] = &id
 	mm["name"] = &name
 	mm["dummy"] = &dummy
-	err = q.ExecuteQuery(2)
+	err = q.Exec(2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +230,7 @@ func TestQuery(t *testing.T) {
 	}
 
 	// test Next built-in type
-	err = q.ExecuteQuery(3)
+	err = q.Exec(3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +266,7 @@ func TestQuery(t *testing.T) {
 	}
 
 	// test All built-in type
-	err = q.ExecuteQuery(0, 10)
+	err = q.Exec(0, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,7 +292,7 @@ func TestQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = q.ExecuteQuery(0, 10)
+	err = q.Exec(0, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +328,7 @@ func TestTable(t *testing.T) {
 	// test table
 	tb := db.BindTable("xx")
 
-	err := tb.ExecuteQuery()
+	err := tb.Exec()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +338,7 @@ func TestTable(t *testing.T) {
 		t.Log(*r)
 	}
 
-	err = tb.ExecuteQuery()
+	err = tb.Exec()
 	if err != nil {
 		t.Fatal(err)
 	}
