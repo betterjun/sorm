@@ -83,6 +83,19 @@ type Query interface {
 	Next(obj interface{}, args ...interface{}) error
 	All(objs interface{}) (err error)
 	Close() error
+}
+
+/*
+The design gives a good reuse of Query, can have multi result sets by each Exec call.
+res := Query.Exec()
+res.Next()
+res.All()
+
+res.Filter()
+*/
+type Result interface {
+	Next(obj interface{}, args ...interface{}) error
+	All(objs interface{}) (err error)
 
 	//Count(filter interface{}) (int64, error)
 	//Columns() ([]string, error)
