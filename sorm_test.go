@@ -12,8 +12,12 @@ type tbs struct {
 	Dummy string `orm:"fn=dummy"`
 }
 
+const (
+	CONN_STRING = "root:root@tcp(127.0.0.1:3306)/world"
+)
+
 func TestDatabase(t *testing.T) {
-	db := NewDatabase("mysql", "root:betterjun@tcp(127.0.0.1:3306)/pholcus")
+	db := NewDatabase("mysql", CONN_STRING)
 	if db == nil {
 		t.Fatal("TestDatabase: create db failed")
 	}
@@ -154,7 +158,7 @@ func TestDatabase(t *testing.T) {
 }
 
 func TestQuery(t *testing.T) {
-	db := NewDatabase("mysql", "root:betterjun@tcp(127.0.0.1:3306)/pholcus")
+	db := NewDatabase("mysql", CONN_STRING)
 	if db == nil {
 		t.Fatal("TestDatabase: create db failed")
 	}
@@ -175,26 +179,64 @@ func TestQuery(t *testing.T) {
 	}
 	t.Logf("ExecuteQuery ok")
 
-	// test Next
+	// test Next struct
 	count := 0
 	r := &tbs{}
 	for q.Next(r) == nil {
 		if r.SId != 1 {
-			t.Errorf("test Next failed, r.SId=%v, expect 1\n", r.SId)
+			t.Errorf("test Next struct failed, r.SId=%v, expect 1\n", r.SId)
 		}
 		count++
 	}
 	if count != 1 {
-		t.Errorf("test Next failed, got %v records, expect 1\n", count)
+		t.Errorf("test Next struct failed, got %v records, expect 1\n", count)
 	}
 
+	// test Next map[string]interface{}
+	var id int64
+	var name string
+	var dummy string
+	mm := make(map[string]interface{})
+	mm["id"] = &id
+	mm["name"] = &name
+	mm["dummy"] = &dummy
 	err = q.ExecuteQuery(2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	count = 0
-	var id int64
+	for {
+		err = q.Next(&mm)
+		if err != nil {
+			if err.Error() == "end of query results" {
+				break
+			}
+			t.Fatal(err)
+		}
+		if id != 2 {
+			t.Errorf("test Next map[string]interface{} failed, id=%v, expect 2\n", id)
+		}
+		if name != "name2" {
+			t.Errorf("test Next map[string]interface{} failed, name=%v, expect \"name2\"\n", name)
+		}
+		if dummy != "dummy2" {
+			t.Errorf("test Next map[string]interface{} failed, dummy=%v, expect \"dummy2\"\n", dummy)
+		}
+		count++
+	}
+	if count != 1 {
+		t.Errorf("test Next map[string]interface{} failed, got %v records, expect 1\n", count)
+	}
+
+	// test Next built-in type
+	err = q.ExecuteQuery(3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count = 0
+	id = 0
 	for {
 		err = q.Next(&id)
 		if err != nil {
@@ -203,18 +245,13 @@ func TestQuery(t *testing.T) {
 			}
 			t.Fatal(err)
 		}
-		if id != 2 {
-			t.Errorf("test Next failed, id=%v, expect 2\n", id)
+		if id != 3 {
+			t.Errorf("test Next built-in type failed, id=%v, expect 3\n", id)
 		}
 		count++
 	}
 	if count != 1 {
-		t.Errorf("test Next failed, got %v records, expect 1\n", count)
-	}
-
-	err = q.ExecuteQuery(3)
-	if err != nil {
-		t.Fatal(err)
+		t.Errorf("test Next built-in type failed, got %v records, expect 1\n", count)
 	}
 
 	err = q.Close()
@@ -222,7 +259,33 @@ func TestQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// test All
+	sql = "select id from xx where id>? and id<? order by id asc"
+	q, err = db.CreateQuery(sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// test All built-in type
+	err = q.ExecuteQuery(0, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var si []int
+	err = q.All(&si)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(si) != 3 {
+		t.Errorf("test All built-in type failed, slice length=%v, expect 3\n", len(si))
+	}
+	for i, r := range si {
+		if r != i+1 {
+			t.Errorf("test All built-in type failed, r=%v, expect %v\n", r, i+1)
+		}
+	}
+
+	// test All struct
 	sql = "select * from xx where id>? and id<? order by id asc"
 	q, err = db.CreateQuery(sql)
 	if err != nil {
@@ -240,24 +303,23 @@ func TestQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(allrows) != 3 {
-		t.Errorf("test All failed, slice length=%v, expect 3\n", len(allrows))
+		t.Errorf("test All struct failed, slice length=%v, expect 3\n", len(allrows))
 	}
 	for i, r := range allrows {
 		if r.SId != i+1 {
-			t.Errorf("test All failed, r.SId=%v, expect %v\n", r.SId, i+1)
+			t.Errorf("test All struct failed, r.SId=%v, expect %v\n", r.SId, i+1)
 		}
 		if r.Name != "" {
-			t.Errorf("test All failed, r.Name=%q, expect \"\"\n", r.Name)
+			t.Errorf("test All struct failed, r.Name=%q, expect \"\"\n", r.Name)
 		}
 		if r.Dummy != fmt.Sprintf("dummy%v", i+1) {
-			t.Errorf("test All failed, r.Dummy=%q, expect %q\n", r.Dummy, fmt.Sprintf("dummy%v", i+1))
+			t.Errorf("test All struct failed, r.Dummy=%q, expect %q\n", r.Dummy, fmt.Sprintf("dummy%v", i+1))
 		}
 	}
-	t.Logf("test All ok")
 }
 
 func TestTable(t *testing.T) {
-	db := NewDatabase("mysql", "root:betterjun@tcp(127.0.0.1:3306)/pholcus")
+	db := NewDatabase("mysql", CONN_STRING)
 	if db == nil {
 		t.Fatal("TestDatabase: create db failed")
 	}
