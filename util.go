@@ -2,7 +2,6 @@ package sorm
 
 import (
 	"database/sql"
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -126,24 +125,24 @@ func parseTag(fieldName, tag string) (ti *tagInfo) {
 	fieldName = strings.ToLower(fieldName)
 
 	ti = &tagInfo{fn: fieldName, pk: false, ignored: false}
-	fmt.Println(1, fieldName)
+	//fmt.Println(1, fieldName)
 
 	tags := strings.Split(tag, ";")
 	if len(tags) > 0 {
 		for _, kvp := range tags {
-			fmt.Printf("tag %q\n", kvp)
+			//fmt.Printf("tag %q\n", kvp)
 			kvp = strings.TrimSpace(kvp)
 			if kvp == "_" {
 				ti.fn = "_"
 				ti.pk = false
 				ti.ignored = true
-				fmt.Println(2, ti.fn)
+				//fmt.Println(2, ti.fn)
 				continue
 			}
 
 			kv := strings.Split(kvp, "=")
 			if len(kv) != 2 { // wrong format of orm, just use fieldname
-				fmt.Println(3, fieldName)
+				//fmt.Println(3, fieldName)
 				continue
 			}
 			kv[0] = strings.TrimSpace(kv[0])
@@ -156,13 +155,13 @@ func parseTag(fieldName, tag string) (ti *tagInfo) {
 					ti.fn = "_"
 					ti.pk = false
 					ti.ignored = true
-					fmt.Println(4, ti.fn)
+					//fmt.Println(4, ti.fn)
 				} else if kv[1] == "" {
 					ti.fn = fieldName
-					fmt.Println(5, ti.fn)
+					//fmt.Println(5, ti.fn)
 				} else {
 					ti.fn = kv[1]
-					fmt.Println(6, ti.fn)
+					//fmt.Println(6, ti.fn)
 				}
 			}
 		}
