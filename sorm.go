@@ -43,7 +43,12 @@ type Table interface {
 	Delete(obj interface{}) (sql.Result, error)
 	Update(obj interface{}) (sql.Result, error)
 
+	// Refactor the methods as below?
+	// type Filter map[string]interface{}
 	//Query(obj, filter)
+	//Delete(obj, filter)
+	//Update(obj, filter)
+
 	//Drop() error
 	//Truncate() error
 }
