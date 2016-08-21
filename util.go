@@ -8,6 +8,37 @@ import (
 	"strings"
 )
 
+func getFieldsForOne(ptr interface{}, optPtr []interface{}, cols []string) (scanArgs []interface{}) {
+	v := reflect.ValueOf(ptr)
+	switch v.Kind() {
+	case reflect.Ptr: // only accept pointer
+		ind := reflect.Indirect(v) // equal with v.Elem()
+		switch ind.Kind() {
+		case reflect.Map:
+			return getScanFieldFromMap(ind, cols)
+		case reflect.Struct:
+			return getScanFieldFromStruct(ind, cols)
+		default: // pointer to value
+			scanArgs = append(scanArgs, ptr)
+			for _, op := range optPtr {
+				if reflect.ValueOf(op).Kind() != reflect.Ptr {
+					return nil
+				}
+				scanArgs = append(scanArgs, op)
+			}
+
+			return scanArgs
+		}
+	default:
+		return nil
+	}
+}
+
+func getFieldsForSlice(ptr interface{}, optPtr []interface{}, cols []string) (scanArgs []interface{}) {
+	// TODO : fill in the optPtr
+	return getScanFields(ptr, cols)
+}
+
 func getScanFields(ptr interface{}, cols []string) (scanArgs []interface{}) {
 	v := reflect.ValueOf(ptr)
 	switch v.Kind() {
