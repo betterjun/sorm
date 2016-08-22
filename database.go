@@ -49,10 +49,10 @@ func (db *database) Close() (err error) {
 
 func (db *database) BindTable(tn string) (t Table, err error) {
 	tbl := &table{db: db, name: tn}
-	err = tbl.query("select * from " + tn)
-	if err != nil {
-		return nil, err
-	}
+	//	err = tbl.query("select * from " + tn)
+	//	if err != nil {
+	//		return nil, err
+	//	}
 	return tbl, nil
 }
 

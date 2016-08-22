@@ -37,17 +37,34 @@ type Database interface {
 }
 
 type Table interface {
-	Result
-	Insert(obj interface{}) (sql.Result, error)
-	// by pk
-	Delete(obj interface{}) (sql.Result, error)
-	Update(obj interface{}) (sql.Result, error)
+	/*
+		Result
+		Insert(obj interface{}) (sql.Result, error)
+		// by pk
+		Delete(obj interface{}) (sql.Result, error)
+		Update(obj interface{}) (sql.Result, error)
+	*/
 
 	// Refactor the methods as below?
 	// type Filter map[string]interface{}
 	//Query(obj, filter)
 	//Delete(obj, filter)
 	//Update(obj, filter)
+
+	// will insert by the column order
+	Insert(values ...interface{}) (sql.Result, error)
+	// will only insert the columns the table has
+	//Insert(value map[string]interface{})
+	//Insert(value struct)
+
+	Delete(filter string) (sql.Result, error)
+
+	Update(filter string, value interface{}) (sql.Result, error)
+	//Update(filter string, value map[string]interface{})
+	//Update(filter string, value struct)
+
+	// will select all columns
+	Query(filter string) (Result, error)
 
 	//Drop() error
 	//Truncate() error
