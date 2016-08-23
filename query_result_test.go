@@ -20,6 +20,15 @@ func testNext(db Database, t *testing.T) {
 		t.Fatal(err)
 	}
 
+	colNames, err := res.ColumnNames()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(colNames)
+	if len(colNames) != 3 {
+		t.Errorf("test Next ColumnNames failed, got %v records, expect 3\n", len(colNames))
+	}
+
 	// test Next struct
 	count := 0
 	r := &tbs{}
@@ -120,6 +129,15 @@ func testAll(db Database, t *testing.T) {
 	res, err := q.Exec(0, 10)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	colNames, err := res.ColumnNames()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(colNames)
+	if len(colNames) != 1 {
+		t.Errorf("test All ColumnNames failed, got %v records, expect 1\n", len(colNames))
 	}
 
 	var si []int

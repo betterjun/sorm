@@ -1,9 +1,9 @@
 package sorm
 
 type tbs struct {
-	SId   int    `orm:"pk=1;fn=id"`
-	Name  string `orm:"_"`
-	Dummy string `orm:"fn=dummy"`
+	SId   int    `sorm:"fn=id"`
+	Name  string `sorm:"_"`
+	Dummy string `sorm:"fn=dummy"`
 }
 
 const (

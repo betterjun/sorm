@@ -31,18 +31,20 @@ func (db *database) open(conn string) (err error) {
 }
 
 func (db *database) Exec(sql string, args ...interface{}) (res sql.Result, err error) {
-	if db.db != nil {
-		return db.db.Exec(sql, args...)
+	if db.db == nil {
+		return nil, fmt.Errorf("db is not opened")
 	}
-	return nil, fmt.Errorf("db is not opened")
+	return db.db.Exec(sql, args...)
 }
 
 func (db *database) Close() (err error) {
-	if db.db != nil {
-		err = db.db.Close()
-		if err == nil {
-			db.db = nil
-		}
+	if db.db == nil {
+		return fmt.Errorf("db is not opened")
+	}
+
+	err = db.db.Close()
+	if err == nil {
+		db.db = nil
 	}
 	return err
 }
@@ -53,15 +55,17 @@ func (db *database) BindTable(tn string) (t Table, err error) {
 }
 
 func (db *database) CreateQuery(sql string) (q Query, err error) {
-	if db.db != nil {
-		qr := &query{sql: sql}
-		qr.stmt, err = db.db.Prepare(sql)
-		if err != nil {
-			return nil, err
-		}
-		q = qr
+	if db.db == nil {
+		return nil, fmt.Errorf("db is not opened")
+
 	}
-	return q, err
+
+	qr := &query{sql: sql}
+	qr.stmt, err = db.db.Prepare(sql)
+	if err != nil {
+		return nil, err
+	}
+	return qr, err
 }
 
 func (db *database) SetConnMaxLifetime(d time.Duration) {

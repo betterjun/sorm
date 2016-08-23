@@ -87,6 +87,22 @@ func (r *result) All(objs interface{}) (err error) {
 	return err
 }
 
+func (r *result) ColumnNames() (cols []string, err error) {
+	if r.rows == nil {
+		return nil, fmt.Errorf("result is not initialized")
+	}
+
+	if r.cols == nil {
+		r.cols, err = r.rows.Columns()
+		if err != nil {
+			return nil, err
+		}
+	}
+	cols = make([]string, len(r.cols))
+	copy(cols, r.cols)
+	return cols, nil
+}
+
 func (r *result) Close() (err error) {
 	if r.rows != nil {
 		err = r.rows.Close()

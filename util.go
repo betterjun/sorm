@@ -3,7 +3,6 @@ package sorm
 import (
 	"database/sql"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -25,31 +24,6 @@ func getFieldsForOne(ptr interface{}, optPtr []interface{}, cols []string) (scan
 				}
 				scanArgs = append(scanArgs, op)
 			}
-
-			return scanArgs
-		}
-	default:
-		return nil
-	}
-}
-
-func getFieldsForSlice(ptr interface{}, optPtr []interface{}, cols []string) (scanArgs []interface{}) {
-	// TODO : fill in the optPtr
-	return getScanFields(ptr, cols)
-}
-
-func getScanFields(ptr interface{}, cols []string) (scanArgs []interface{}) {
-	v := reflect.ValueOf(ptr)
-	switch v.Kind() {
-	case reflect.Ptr: // only accept pointer
-		ind := reflect.Indirect(v) // equal with v.Elem()
-		switch ind.Kind() {
-		case reflect.Map:
-			return getScanFieldFromMap(ind, cols)
-		case reflect.Struct:
-			return getScanFieldFromStruct(ind, cols)
-		default: // pointer to value
-			scanArgs = append(scanArgs, ptr)
 			return scanArgs
 		}
 	default:
@@ -66,7 +40,15 @@ func getScanFieldFromMap(v reflect.Value, cols []string) (scanArgs []interface{}
 }
 
 func getScanFieldFromStruct(v reflect.Value, cols []string) (scanArgs []interface{}) {
-	return getFields(getFieldsFromStruct(v), cols)
+	fields := make(map[string]interface{})
+	for i := 0; i < v.NumField(); i++ {
+		fieldInfo := v.Type().Field(i) // a reflect.StructField
+		ti := parseTag(fieldInfo.Name, fieldInfo.Tag.Get("sorm"))
+		if ti != nil && ti.fn != "_" {
+			fields[ti.fn] = v.Field(i).Addr().Interface()
+		}
+	}
+	return getFields(fields, cols)
 }
 
 func getFields(fields map[string]interface{}, cols []string) (scanArgs []interface{}) {
@@ -80,24 +62,10 @@ func getFields(fields map[string]interface{}, cols []string) (scanArgs []interfa
 	return scanArgs
 }
 
-func getFieldsFromStruct(v reflect.Value) (fields map[string]interface{}) {
-	fields = make(map[string]interface{})
-	for i := 0; i < v.NumField(); i++ {
-		fieldInfo := v.Type().Field(i) // a reflect.StructField
-		ti := parseTag(fieldInfo.Name, fieldInfo.Tag.Get("orm"))
-		if ti != nil && ti.fn != "_" {
-			fields[ti.fn] = v.Field(i).Addr().Interface()
-		}
-	}
-
-	return fields
-}
-
+// name, value pointer for a struct field.
 type tagInfo struct {
-	fn      string
-	pk      bool
-	ignored bool
-	fp      reflect.Value
+	fn string
+	fp reflect.Value
 }
 
 func getFieldInfoFromStruct(v reflect.Value) (fields map[string]*tagInfo) {
@@ -106,66 +74,50 @@ func getFieldInfoFromStruct(v reflect.Value) (fields map[string]*tagInfo) {
 		fieldInfo := v.Type().Field(i) // a reflect.StructField
 		tag := fieldInfo.Tag           // a reflect.StructTag
 
-		ti := parseTag(fieldInfo.Name, tag.Get("orm"))
+		ti := parseTag(fieldInfo.Name, tag.Get("sorm"))
 		ti.fp = v.Field(i).Addr()
 		if ti != nil && ti.fn != "_" {
 			fields[ti.fn] = ti
 		}
 	}
-
 	return fields
 }
 
+/*
+supported tag:
+	`sorm:"_"`
+	`sorm:"fn=name"`
+*/
 func parseTag(fieldName, tag string) (ti *tagInfo) {
-	/*
-		`orm:"pk=true"`
-		`orm:"_"`
-		`orm:"pk=false;fn=name"`
-	*/
 	fieldName = strings.ToLower(fieldName)
-
-	ti = &tagInfo{fn: fieldName, pk: false, ignored: false}
-	//fmt.Println(1, fieldName)
-
+	ti = &tagInfo{fn: fieldName}
 	tags := strings.Split(tag, ";")
 	if len(tags) > 0 {
 		for _, kvp := range tags {
-			//fmt.Printf("tag %q\n", kvp)
 			kvp = strings.TrimSpace(kvp)
 			if kvp == "_" {
 				ti.fn = "_"
-				ti.pk = false
-				ti.ignored = true
-				//fmt.Println(2, ti.fn)
 				continue
 			}
 
 			kv := strings.Split(kvp, "=")
 			if len(kv) != 2 { // wrong format of orm, just use fieldname
-				//fmt.Println(3, fieldName)
 				continue
 			}
 			kv[0] = strings.TrimSpace(kv[0])
 			kv[1] = strings.TrimSpace(kv[1])
 
-			if kv[0] == "pk" {
-				ti.pk, _ = strconv.ParseBool(kv[1])
-			} else if kv[0] == "fn" {
+			if kv[0] == "fn" {
 				if kv[1] == "_" {
 					ti.fn = "_"
-					ti.pk = false
-					ti.ignored = true
-					//fmt.Println(4, ti.fn)
 				} else if kv[1] == "" {
 					ti.fn = fieldName
-					//fmt.Println(5, ti.fn)
 				} else {
 					ti.fn = kv[1]
-					//fmt.Println(6, ti.fn)
 				}
 			}
 		}
 	}
 
-	return
+	return ti
 }

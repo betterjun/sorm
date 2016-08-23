@@ -70,9 +70,9 @@ type Query interface {
 type Result interface {
 	Next(obj interface{}, args ...interface{}) error
 	All(objs interface{}) error
+	ColumnNames() ([]string, error)
 	Close() error
 
-	// ColumnNames() ([]string, error)
 	// ColumnByIndex(col int) ([]interface{}, error)
 	// ColumnByName(col string) ([]interface{}, error)
 }
