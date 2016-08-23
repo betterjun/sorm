@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -16,6 +17,10 @@ type table struct {
 func (t *table) Insert(values ...interface{}) (res sql.Result, err error) {
 	if t.db == nil {
 		return nil, fmt.Errorf("db is not opened")
+	}
+
+	if len(values) == 0 {
+		return nil, fmt.Errorf("Table.Insert must have an input value")
 	}
 
 	insertSql := fmt.Sprintf("insert into %v(", t.name)
@@ -48,23 +53,19 @@ func (t *table) Insert(values ...interface{}) (res sql.Result, err error) {
 		sql = insertSql[0:len(insertSql)-1] + ") values" + valueSql[0:len(valueSql)-1] + ")"
 	case reflect.Map:
 		keys := obv.MapKeys()
-		args := make([]interface{}, 0)
 		for _, v := range keys {
 			k := v.Interface().(string)
-
 			insertSql += k + ","
 			valueSql += fmt.Sprintf("?,")
 			args = append(args, obv.MapIndex(v).Interface())
 		}
 
-		if len(args) == 0 {
-			return nil, fmt.Errorf("no valid fields found in the object")
-		}
-
 		sql = insertSql[0:len(insertSql)-1] + ") values" + valueSql[0:len(valueSql)-1] + ")"
 	default:
-		// treat as slice input
-		return nil, fmt.Errorf("slice not implemented yet")
+		insertSql = fmt.Sprintf("insert into %v values(", t.name)
+		insertSql += strings.Repeat("?,", len(values))
+		args = values
+		sql = insertSql[0:len(insertSql)-1] + ")"
 	}
 
 	if len(args) == 0 {
@@ -119,7 +120,6 @@ func (t *table) Update(filter string, value interface{}) (res sql.Result, err er
 		}
 	case reflect.Map:
 		keys := obv.MapKeys()
-		args := make([]interface{}, 0)
 		for _, v := range keys {
 			k := v.Interface().(string)
 			whereSql += k + "=?,"

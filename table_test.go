@@ -182,25 +182,16 @@ func testAllStruct(tb Result, t *testing.T) {
 }
 
 func testTableInsert(tb Table, t *testing.T) {
-	// test insert built-in type, only one column
+	// test insert built-in type, you should passing all the columns by it's order in db.
 	id := 1000
-	res, err := tb.Insert(id)
+	name := "name1001"
+	dummy := "dummy1001"
+	res, err := tb.Insert(id, name, dummy)
 	if err != nil {
 		t.Fatal(err)
 	}
 	lii, _ := res.LastInsertId()
 	ra, _ := res.RowsAffected()
-	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
-
-	// test insert built-in type, two columns
-	id++
-	name := "name1001"
-	res, err = tb.Insert(id, name)
-	if err != nil {
-		t.Fatal(err)
-	}
-	lii, _ = res.LastInsertId()
-	ra, _ = res.RowsAffected()
 	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 
 	// test insert map
