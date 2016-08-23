@@ -37,14 +37,6 @@ type Database interface {
 }
 
 type Table interface {
-	/*
-		Result
-		Insert(obj interface{}) (sql.Result, error)
-		// by pk
-		Delete(obj interface{}) (sql.Result, error)
-		Update(obj interface{}) (sql.Result, error)
-	*/
-
 	// Refactor the methods as below?
 	// type Filter map[string]interface{}
 	//Query(obj, filter)
@@ -67,7 +59,6 @@ type Table interface {
 	Query(filter string) (Result, error)
 
 	//Drop() error
-	//Truncate() error
 }
 
 type Query interface {
@@ -76,20 +67,12 @@ type Query interface {
 	Close() error
 }
 
-/*
-The design gives a good reuse of Query, can have multi result sets by each Exec call.
-res := Query.Exec()
-res.Next()
-res.All()
-
-res.Filter()
-*/
 type Result interface {
 	Next(obj interface{}, args ...interface{}) error
 	All(objs interface{}) error
 	Close() error
 
-	//Count(filter interface{}) (int64, error)
-	//Columns() ([]string, error)
-	//Filter()
+	// ColumnNames() ([]string, error)
+	// ColumnByIndex(col int) ([]interface{}, error)
+	// ColumnByName(col string) ([]interface{}, error)
 }

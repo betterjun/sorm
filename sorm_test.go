@@ -7,5 +7,5 @@ type tbs struct {
 }
 
 const (
-	CONN_STRING = "root:betterjun@tcp(127.0.0.1:3306)/pholcus"
+	CONN_STRING = "root:root@tcp(127.0.0.1:3306)/world"
 )
