@@ -15,6 +15,9 @@ func (q *query) Exec(args ...interface{}) (res Result, err error) {
 		return nil, fmt.Errorf("query is not initialized")
 	}
 
+	if printSql {
+		fmt.Printf("Query.Exec: %v, args %v\n", q.sql, args)
+	}
 	rows, err := q.stmt.Query(args...)
 	if err != nil {
 		return nil, err

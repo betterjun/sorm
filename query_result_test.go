@@ -24,9 +24,14 @@ func testNext(db Database, t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(colNames)
 	if len(colNames) != 3 {
 		t.Errorf("test Next ColumnNames failed, got %v records, expect 3\n", len(colNames))
+	}
+	names := []string{"id", "name", "dummy"}
+	for i, name := range colNames {
+		if name != names[i] {
+			t.Errorf("test All ColumnNames failed, got %q, expect %q\n", name[0], names[i])
+		}
 	}
 
 	// test Next struct
@@ -135,9 +140,11 @@ func testAll(db Database, t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(colNames)
 	if len(colNames) != 1 {
 		t.Errorf("test All ColumnNames failed, got %v records, expect 1\n", len(colNames))
+	}
+	if colNames[0] != "id" {
+		t.Errorf("test All ColumnNames failed, got %q, expect %q\n", colNames[0], "id")
 	}
 
 	var si []int

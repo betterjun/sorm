@@ -192,7 +192,9 @@ func testTableInsert(tb Table, t *testing.T) {
 	}
 	lii, _ := res.LastInsertId()
 	ra, _ := res.RowsAffected()
-	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	if lii != 0 || ra != 1 {
+		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	}
 
 	// test insert map
 	id++
@@ -205,7 +207,9 @@ func testTableInsert(tb Table, t *testing.T) {
 	}
 	lii, _ = res.LastInsertId()
 	ra, _ = res.RowsAffected()
-	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	if lii != 0 || ra != 1 {
+		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	}
 
 	// test insert struct
 	id++
@@ -216,7 +220,9 @@ func testTableInsert(tb Table, t *testing.T) {
 	}
 	lii, _ = res.LastInsertId()
 	ra, _ = res.RowsAffected()
-	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	if lii != 0 || ra != 1 {
+		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	}
 }
 
 func testTableUpdate(tb Table, t *testing.T) {
@@ -233,7 +239,9 @@ func testTableUpdate(tb Table, t *testing.T) {
 	}
 	lii, _ := res.LastInsertId()
 	ra, _ := res.RowsAffected()
-	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	if lii != 0 || ra != 3 {
+		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	}
 
 	// test update struct
 	id++
@@ -247,7 +255,9 @@ func testTableUpdate(tb Table, t *testing.T) {
 	}
 	lii, _ = res.LastInsertId()
 	ra, _ = res.RowsAffected()
-	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	if lii != 0 || ra != 1 {
+		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	}
 }
 
 func testTableDelete(tb Table, t *testing.T) {
@@ -259,7 +269,9 @@ func testTableDelete(tb Table, t *testing.T) {
 	}
 	lii, _ := res.LastInsertId()
 	ra, _ := res.RowsAffected()
-	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	if lii != 0 || ra != 3 {
+		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	}
 
 }
 

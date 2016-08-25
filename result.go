@@ -24,7 +24,10 @@ func (r *result) Next(obj interface{}, args ...interface{}) (err error) {
 	}
 
 	if r.rows.Next() {
-		scanArgs := getFieldsForOne(obj, args, r.cols)
+		scanArgs, err := getFieldsForOne(obj, args, r.cols)
+		if err != nil {
+			return err
+		}
 		if scanArgs == nil {
 			return fmt.Errorf("no receiver found")
 		}

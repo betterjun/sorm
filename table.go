@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 type table struct {
@@ -71,7 +69,9 @@ func (t *table) Insert(values ...interface{}) (res sql.Result, err error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("no valid fields found in the object")
 	}
-	fmt.Println("table.Insert", sql)
+	if printSql {
+		fmt.Printf("table.Insert: %v, args %v\n", sql, args)
+	}
 	return t.db.Exec(sql, args...)
 }
 
@@ -86,7 +86,9 @@ func (t *table) Delete(filter string) (res sql.Result, err error) {
 	} else {
 		sql = "delete from " + t.name + " where " + filter
 	}
-
+	if printSql {
+		fmt.Printf("table.Delete: %v\n", sql)
+	}
 	return t.db.Exec(sql)
 }
 
@@ -126,7 +128,7 @@ func (t *table) Update(filter string, value interface{}) (res sql.Result, err er
 			args = append(args, obv.MapIndex(v).Interface())
 		}
 	default:
-		return nil, fmt.Errorf("non-supported input args, only supporting struct or map[string]interface{}")
+		return nil, fmt.Errorf("argument 2 is not a struct or map[string]interface{}")
 	}
 
 	if len(args) == 0 {
@@ -139,7 +141,9 @@ func (t *table) Update(filter string, value interface{}) (res sql.Result, err er
 	} else {
 		sql = updateSql + whereSql[0:len(whereSql)-1] + " where " + filter
 	}
-	fmt.Println("table.Update", sql)
+	if printSql {
+		fmt.Printf("table.Update: %v, args %v\n", sql, args)
+	}
 	return t.db.Exec(sql, args...)
 }
 

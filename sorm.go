@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+var printSql bool = false
+
+func PrintSql(yes bool) {
+	printSql = yes
+}
+
 //
 func NewDatabase(dbtype, conn string) (db Database) {
 	switch dbtype {

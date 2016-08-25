@@ -15,7 +15,9 @@ func dropTable(db Database, t *testing.T) {
 	}
 	lii, _ := res.LastInsertId()
 	ra, _ := res.RowsAffected()
-	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	if lii != 0 || ra != 0 {
+		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	}
 }
 
 func createTable(db Database, t *testing.T) {
@@ -26,7 +28,9 @@ func createTable(db Database, t *testing.T) {
 	}
 	lii, _ := res.LastInsertId()
 	ra, _ := res.RowsAffected()
-	t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	if lii != 0 || ra != 0 {
+		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+	}
 }
 
 func insertTable(db Database, t *testing.T) {
@@ -40,7 +44,9 @@ func insertTable(db Database, t *testing.T) {
 		}
 		lii, _ := res.LastInsertId()
 		ra, _ := res.RowsAffected()
-		t.Logf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+		if lii != 0 || ra != 1 {
+			t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
+		}
 	}
 }
 

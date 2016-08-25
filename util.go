@@ -2,32 +2,33 @@ package sorm
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
 	"strings"
 )
 
-func getFieldsForOne(ptr interface{}, optPtr []interface{}, cols []string) (scanArgs []interface{}) {
+func getFieldsForOne(ptr interface{}, optPtr []interface{}, cols []string) (scanArgs []interface{}, err error) {
 	v := reflect.ValueOf(ptr)
 	switch v.Kind() {
 	case reflect.Ptr: // only accept pointer
 		ind := reflect.Indirect(v) // equal with v.Elem()
 		switch ind.Kind() {
 		case reflect.Map:
-			return getScanFieldFromMap(ind, cols)
+			return getScanFieldFromMap(ind, cols), nil
 		case reflect.Struct:
-			return getScanFieldFromStruct(ind, cols)
+			return getScanFieldFromStruct(ind, cols), nil
 		default: // pointer to value
 			scanArgs = append(scanArgs, ptr)
-			for _, op := range optPtr {
+			for i, op := range optPtr {
 				if reflect.ValueOf(op).Kind() != reflect.Ptr {
-					return nil
+					return nil, fmt.Errorf("argument %v is non-pointer ", i+2) // ptr is 1, and i is 0 based
 				}
 				scanArgs = append(scanArgs, op)
 			}
-			return scanArgs
+			return scanArgs, nil
 		}
 	default:
-		return nil
+		return nil, fmt.Errorf("non-pointer receiver argument found")
 	}
 }
 
