@@ -182,6 +182,12 @@ func testAllStruct(tb Result, t *testing.T) {
 }
 
 func testTableInsert(tb Table, t *testing.T) {
+	testTableInsertBuiltin(tb, t)
+	testTableInsertMap(tb, t)
+	testTableInsertStruct(tb, t)
+}
+
+func testTableInsertBuiltin(tb Table, t *testing.T) {
 	// test insert built-in type, you should passing all the columns by it's order in db.
 	id := 1000
 	name := "name1001"
@@ -195,39 +201,45 @@ func testTableInsert(tb Table, t *testing.T) {
 	if lii != 0 || ra != 1 {
 		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 	}
+}
 
+func testTableInsertMap(tb Table, t *testing.T) {
 	// test insert map
-	id++
 	args := make(map[string]interface{})
-	args["id"] = id
+	args["id"] = 1001
 	args["name"] = "insert by map"
-	res, err = tb.Insert(&args)
+	res, err := tb.Insert(&args)
 	if err != nil {
 		t.Fatal(err)
 	}
-	lii, _ = res.LastInsertId()
-	ra, _ = res.RowsAffected()
+	lii, _ := res.LastInsertId()
+	ra, _ := res.RowsAffected()
 	if lii != 0 || ra != 1 {
 		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 	}
+}
 
+func testTableInsertStruct(tb Table, t *testing.T) {
 	// test insert struct
-	id++
-	ts := &tbs{SId: id, Name: "fn=name", Dummy: "ignored"}
-	res, err = tb.Insert(ts)
+	ts := &tbs{SId: 1002, Name: "fn=name", Dummy: "ignored"}
+	res, err := tb.Insert(ts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	lii, _ = res.LastInsertId()
-	ra, _ = res.RowsAffected()
+	lii, _ := res.LastInsertId()
+	ra, _ := res.RowsAffected()
 	if lii != 0 || ra != 1 {
 		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 	}
 }
 
 func testTableUpdate(tb Table, t *testing.T) {
+	testTableUpdateMap(tb, t)
+	testTableStruct(tb, t)
+}
+
+func testTableUpdateMap(tb Table, t *testing.T) {
 	// test update map
-	id := 1000
 	args := make(map[string]interface{})
 	args["name"] = "updated by map"
 	args["dummy"] = "updated by testTableUpdate"
@@ -242,19 +254,21 @@ func testTableUpdate(tb Table, t *testing.T) {
 	if lii != 0 || ra != 3 {
 		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 	}
+}
 
+func testTableStruct(tb Table, t *testing.T) {
 	// test update struct
-	id++
+	id := 1001
 	ts := &tbs{SId: id}
 	ts.Name = "ts"
 	ts.Dummy = "dummy"
-	filter = fmt.Sprintf("id=%v and name <>\"\"", id)
-	res, err = tb.Update(filter, ts)
+	filter := fmt.Sprintf("id=%v and name <>\"\"", id)
+	res, err := tb.Update(filter, ts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	lii, _ = res.LastInsertId()
-	ra, _ = res.RowsAffected()
+	lii, _ := res.LastInsertId()
+	ra, _ := res.RowsAffected()
 	if lii != 0 || ra != 1 {
 		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 	}
@@ -272,7 +286,6 @@ func testTableDelete(tb Table, t *testing.T) {
 	if lii != 0 || ra != 3 {
 		t.Fatalf("res.LastInsertId()=%v, res.RowsAffected()=%v", lii, ra)
 	}
-
 }
 
 func TestTable(t *testing.T) {
